@@ -1,14 +1,12 @@
 package monitoring.web;
 
-import monitoring.ClientSession;
-import monitoring.ClientSessionManager;
-import monitoring.IndexingAdapter;
-import monitoring.StorageAdapter;
+import monitoring.session.ClientSession;
+import monitoring.session.ClientSessionManager;
+import monitoring.indexing.IndexingAdapter;
+import monitoring.storage.StorageAdapter;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletResponse;
 
 import java.net.URL;
 import java.util.concurrent.ExecutionException;

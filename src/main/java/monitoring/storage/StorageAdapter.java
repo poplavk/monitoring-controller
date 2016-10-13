@@ -1,5 +1,7 @@
-package monitoring;
+package monitoring.storage;
 
+import monitoring.session.ClientSession;
+import monitoring.session.ClientSessionManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

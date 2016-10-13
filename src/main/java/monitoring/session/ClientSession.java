@@ -1,4 +1,4 @@
-package monitoring;
+package monitoring.session;
 
 import java.net.URL;
 import java.util.ArrayList;

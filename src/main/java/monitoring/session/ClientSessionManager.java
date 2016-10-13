@@ -1,4 +1,4 @@
-package monitoring;
+package monitoring.session;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
