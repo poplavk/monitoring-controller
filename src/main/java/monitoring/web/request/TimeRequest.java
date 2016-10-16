@@ -1,10 +1,10 @@
-package monitoring.web;
+package monitoring.web.request;
 
-public class ClientRequest {
+public class TimeRequest extends ClientRequest {
     private long from;
     private long to;
 
-    public ClientRequest(long from, long to) {
+    public TimeRequest(long from, long to) {
         this.from = from;
         this.to = to;
     }

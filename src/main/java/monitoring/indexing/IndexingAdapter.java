@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Deprecated
 public class IndexingAdapter {
     private final Logger logger = LogManager.getLogger(IndexingAdapter.class);
     private final ConcurrentHashMap<URL, IndexingInputAdapter> inputAdapters;

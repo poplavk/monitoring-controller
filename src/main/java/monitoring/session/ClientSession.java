@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+@Deprecated
 public class ClientSession {
     public final URL chosenIdxUrl;
     public final URL chosenStorageUrl;

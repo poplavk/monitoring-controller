@@ -1,56 +1,63 @@
 package monitoring.web;
 
-import monitoring.session.ClientSession;
-import monitoring.session.ClientSessionManager;
-import monitoring.indexing.IndexingAdapter;
-import monitoring.storage.StorageAdapter;
+import monitoring.storage.StorageResponse;
+import monitoring.web.request.TimeAndCountRequest;
+import monitoring.web.request.TimeRequest;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.net.URL;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
-import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 @RestController
 public class ClientAdapter {
     private static final Logger logger = LogManager.getLogger(ClientAdapter.class);
 
-    @RequestMapping(value = "/fromto", method = POST)
-    public ClientResponse requestWithBody(@RequestBody ClientRequest request) {
-        logger.info("Received object " + request);
-        return new ClientResponse(new long[] {1L}, new long[] {2L});
+//    @RequestMapping(value = "/fromto", method = POST)
+//    public ClientResponse requestWithBody(@RequestBody ClientRequest request) {
+//        logger.info("Received object " + request);
+//        return new ClientResponse(new long[]{1L}, new long[]{2L});
+//    }
+
+    @RequestMapping(value = "/getdata", method = GET)
+    public ClientResponse timeRequest(@RequestParam(value = "starttime", defaultValue = "-1") String from,
+                                      @RequestParam(value = "endtime", defaultValue = "-1") String to) {
+        logger.info("Received get request, from=" + from + "," + "to=" + to);
+
+        TimeRequest request = new TimeRequest(Long.valueOf(from), Long.valueOf(to));
+        ClientMessageHandler handler = new ClientMessageHandler();
+        try {
+            List<StorageResponse> responses = handler.handle(request);
+        } catch (InterruptedException | ExecutionException e) {
+            logger.error("unexpected error", e);
+        } catch (TimeoutException e) {
+            logger.error("timeout occured", e);
+        }
+
+        return null;
     }
 
-    @RequestMapping(value = "/fromto", method = GET)
-    public ClientResponse requestWithParams(@RequestParam(value = "from", defaultValue = "0") String from,
-                                            @RequestParam(value = "to", defaultValue = "0") String to) {
-        logger.info("Received object, from=" + from + "," + "to=" + to);
+    @RequestMapping(value = "/getdata", method = GET)
+    public ClientResponse timeAndCount(@RequestParam(value = "starttime", defaultValue = "-1") String from,
+                                       @RequestParam(value = "count", defaultValue = "-1") String count) {
+        logger.info("Received get request, from=" + from + "," + "count=" + count);
 
-        URL indexing = IndexingAdapter.instance().nextIndexing();
-        URL storage = StorageAdapter.instance().nextStorage();
-
-        ClientSession session = new ClientSession(indexing, storage);
-        ClientSessionManager.instance().addSession(session);
-
-        IndexingAdapter.instance().send("FUCK YOU", indexing);
-
-        logger.debug("Starting to wait for 5000L");
+        TimeAndCountRequest request = new TimeAndCountRequest(Long.parseLong(from), Integer.parseInt(count));
+        ClientMessageHandler handler = new ClientMessageHandler();
         try {
-            boolean isOkay = session.promise.get(5000L, TimeUnit.MILLISECONDS);
-            // TODO: 13.10.2016 respond to client!
-            if (isOkay) {
-                return new ClientResponse(new long[] {1L}, new long[] {1L});
-            } else {
-                return new ClientResponse(new long[] {6L}, new long[] {6L});
-            }
-        } catch (ExecutionException | TimeoutException | InterruptedException e) {
-            logger.error("Fucking error", e);
-            return new ClientResponse(new long[] {6L}, new long[] {6L});
+            List<StorageResponse> responses = handler.handle(request);
+        } catch (InterruptedException | ExecutionException e) {
+            logger.error("unexpected error", e);
+        } catch (TimeoutException e) {
+            logger.error("timeout occured", e);
         }
+
+        return null;
     }
 }

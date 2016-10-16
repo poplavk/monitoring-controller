@@ -22,7 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
+@Deprecated
 public class StorageAdapter {
     private final Logger logger = LogManager.getLogger(StorageAdapter.class);
     private final ConcurrentHashMap<URL, StorageInputAdapter> inputAdapters;

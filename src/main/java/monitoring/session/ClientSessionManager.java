@@ -3,6 +3,7 @@ package monitoring.session;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Deprecated
 public class ClientSessionManager {
     private ConcurrentHashMap<UUID, ClientSession> clientSessions = new ConcurrentHashMap<>();
 
