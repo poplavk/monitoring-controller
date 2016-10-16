@@ -5,8 +5,11 @@ import monitoring.web.request.TimeAndCountRequest;
 import monitoring.web.request.TimeRequest;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -25,39 +28,47 @@ public class ClientAdapter {
 //        return new ClientResponse(new long[]{1L}, new long[]{2L});
 //    }
 
-    @RequestMapping(value = "/getdata", method = GET)
-    public ClientResponse timeRequest(@RequestParam(value = "starttime", defaultValue = "-1") String from,
-                                      @RequestParam(value = "endtime", defaultValue = "-1") String to) {
+    @RequestMapping(value = "/getdata", method = GET, params = {"starttime", "endtime"})
+    public ResponseEntity<ClientResponse> timeRequest(@RequestParam("starttime") String from,
+                                                      @RequestParam("endtime") String to) {
         logger.info("Received get request, from=" + from + "," + "to=" + to);
 
-        TimeRequest request = new TimeRequest(Long.valueOf(from), Long.valueOf(to));
-        ClientMessageHandler handler = new ClientMessageHandler();
         try {
+            TimeRequest request = new TimeRequest(Long.valueOf(from), Long.valueOf(to));
+            ClientMessageHandler handler = new ClientMessageHandler();
             List<StorageResponse> responses = handler.handle(request);
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException | ExecutionException | RuntimeException e) {
             logger.error("unexpected error", e);
+            throw new UnexpectedError();
         } catch (TimeoutException e) {
-            logger.error("timeout occured", e);
+            throw new MonitoringTimeoutException();
         }
 
-        return null;
+        return ResponseEntity.ok(new ClientResponse(new long[]{1L}, new long[]{2L}));
     }
 
-    @RequestMapping(value = "/getdata", method = GET)
-    public ClientResponse timeAndCount(@RequestParam(value = "starttime", defaultValue = "-1") String from,
+    @RequestMapping(value = "/getdata", method = GET, params = {"starttime", "count"})
+    public ResponseEntity<ClientResponse> timeAndCount(@RequestParam(value = "starttime", defaultValue = "-1") String from,
                                        @RequestParam(value = "count", defaultValue = "-1") String count) {
         logger.info("Received get request, from=" + from + "," + "count=" + count);
 
-        TimeAndCountRequest request = new TimeAndCountRequest(Long.parseLong(from), Integer.parseInt(count));
-        ClientMessageHandler handler = new ClientMessageHandler();
         try {
+            TimeAndCountRequest request = new TimeAndCountRequest(Long.parseLong(from), Integer.parseInt(count));
+            ClientMessageHandler handler = new ClientMessageHandler();
             List<StorageResponse> responses = handler.handle(request);
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException | ExecutionException | RuntimeException e) {
             logger.error("unexpected error", e);
+            throw new UnexpectedError();
         } catch (TimeoutException e) {
-            logger.error("timeout occured", e);
+            throw new MonitoringTimeoutException();
         }
 
-        return null;
+        return ResponseEntity.ok(new ClientResponse(new long[]{1L}, new long[]{2L}));
     }
+
+    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR, reason = "Timeout error")
+    public class MonitoringTimeoutException extends RuntimeException {}
+
+    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR, reason = "Unexpected error")
+    public class UnexpectedError extends RuntimeException {}
 }
