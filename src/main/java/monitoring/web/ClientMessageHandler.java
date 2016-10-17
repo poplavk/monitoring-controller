@@ -1,5 +1,6 @@
 package monitoring.web;
 
+import monitoring.config.Configuration;
 import monitoring.indexing.IndexingAsyncRequestHandler;
 import monitoring.indexing.IndexingManager;
 import monitoring.storage.StorageResponse;
@@ -23,23 +24,27 @@ import java.util.stream.Collectors;
 public class ClientMessageHandler {
     private static final Logger logger = LogManager.getLogger(ClientMessageHandler.class);
 
+    private Configuration config;
+    public ClientMessageHandler(Configuration config) { this.config = config; }
+
     public List<StorageResponse> handle(ClientRequest request) throws InterruptedException, ExecutionException, TimeoutException {
         IndexingAsyncRequestHandler handler = new IndexingAsyncRequestHandler(request);
 
         AsyncHttpClient client = new DefaultAsyncHttpClient();
         String url = makeIndexURL(request);
-        logger.debug("URL for indexing request is " + url);
+        logger.debug("URL for requesting indexing service: " + url);
         ListenableFuture<List<CompletableFuture<StorageResponse>>> requestFuture = client.prepareGet(url).execute(handler);
 
-        List<CompletableFuture<StorageResponse>> storageFuts = requestFuture.get(20000L, TimeUnit.MILLISECONDS);
-        logger.info("Received " + storageFuts.size() + " messages from indexing, sent all to storage, now will wait for storage responses");
+        List<CompletableFuture<StorageResponse>> storageFuts = requestFuture.get(config.timeouts.indexingTimeout, TimeUnit.MILLISECONDS);
+        logger.info("Received " + storageFuts.size() +
+                " messages from indexing, sent all to storage, now will wait for storage responses for " + config.timeouts.storageTimeout + " ms");
 
         CompletableFuture<Void> listFuture = CompletableFuture.allOf(storageFuts.toArray(new CompletableFuture[storageFuts.size()]));
         CompletableFuture<List<StorageResponse>> ff = listFuture.thenApply(v ->
                 storageFuts.stream().map(CompletableFuture::join).collect(Collectors.toList())
         );
 
-        return ff.get(5000L, TimeUnit.MILLISECONDS);
+        return ff.get(config.timeouts.storageTimeout, TimeUnit.MILLISECONDS);
     }
 
     private String makeIndexURL(ClientRequest clientRequest) {

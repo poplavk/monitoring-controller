@@ -1,5 +1,6 @@
 package monitoring;
 
+import monitoring.config.Configuration;
 import monitoring.indexing.IndexingManager;
 import monitoring.storage.StorageManager;
 import monitoring.storage.StorageResponse;
@@ -27,11 +28,18 @@ import static spark.Spark.port;
 public class AppInitializer {
     private static final Logger logger = LogManager.getLogger(AppInitializer.class);
 
-    public void start(int port) {
-        port(port);
-        createRoutes();
+    private Configuration config;
 
-        logger.info("Server successfully started at port: " + port);
+    public AppInitializer(Configuration config) {
+        this.config = config;
+    }
+
+    public void start() {
+        port(config.port);
+        createRoutes();
+        setup();
+
+        logger.info("Server successfully started at port: " + config.port);
     }
 
     private void createRoutes() {
@@ -70,7 +78,7 @@ public class AppInitializer {
                 return "Unknown request type";
             }
 
-            ClientMessageHandler handler = new ClientMessageHandler();
+            ClientMessageHandler handler = new ClientMessageHandler(config);
 
             try {
                 List<StorageResponse> responses = handler.handle(request);
@@ -104,12 +112,8 @@ public class AppInitializer {
             } else {
                 logger.debug("Received request to add indexing service with host " + host + ":" + port);
                 try {
-                    Socket sock = new Socket(host, Integer.parseInt(port));
-                    sock.close();
-
-                    URL url = new URL("http://" + host + ":" + port + "/");
-                    IndexingManager.instance().add(url);
-                    String response = "Indexing service at URL " + url + " successfully added";
+                    addIndexing(host, Integer.parseInt(port));
+                    String response = "Indexing service at URL " + host + ":" + port + " successfully added";
                     logger.info(response);
                     res.status(200);
                     return response;
@@ -143,20 +147,11 @@ public class AppInitializer {
             } else {
                 logger.debug("Received request to add storage with host " + host + ":" + port);
                 try {
-                    Socket sock = new Socket(host, Integer.parseInt(port));
-                    sock.close();
-
-                    URL url = new URL("http://" + host + ":" + port + "/");
-                    StorageManager.instance().add(url);
-                    String response = "Storage service at URL " + url + " successfully added";
+                    addStorage(host, Integer.parseInt(port));
+                    String response = "Storage service at URL " + host + ":" + port + " successfully added";
                     logger.info(response);
                     res.status(200);
                     return response;
-                } catch (UnknownHostException e) {
-                    String error = "Unknown host at " + host + ":" + port;
-                    logger.error(error, e);
-                    res.status(500);
-                    return error;
                 } catch (IOException e) {
                     logger.error("Error at adding host", e);
                     String error = "Error adding host " + host + ":" + port + ", exception: " + e;
@@ -165,6 +160,44 @@ public class AppInitializer {
                 }
             }
         });
+    }
+
+    private void setup() {
+        config.storages.forEach(s -> {
+            String host = s.substring(0, s.indexOf(":"));
+            int port = Integer.parseInt(s.substring(s.indexOf(":") + 1));
+            try {
+                addStorage(host, port);
+            } catch (IOException e) {
+                logger.error("Error at initial setup of storage @ " + host + ":" + port);
+            }
+        });
+
+        config.indexes.forEach(s -> {
+            String host = s.substring(0, s.indexOf(":"));
+            int port = Integer.parseInt(s.substring(s.indexOf(":") + 1));
+            try {
+                addIndexing(host, port);
+            } catch (IOException e) {
+                logger.error("Error at initial setup of indexing @ " + host + ":" + port);
+            }
+        });
+    }
+
+    private void addStorage(String host, int port) throws IOException {
+        Socket sock = new Socket(host, port);
+        sock.close();
+
+        URL url = new URL("http://" + host + ":" + port + "/");
+        StorageManager.instance().add(url);
+    }
+
+    private void addIndexing(String host, int port) throws IOException {
+        Socket sock = new Socket(host, port);
+        sock.close();
+
+        URL url = new URL("http://" + host + ":" + port + "/");
+        IndexingManager.instance().add(url);
     }
 
     public void stop() {

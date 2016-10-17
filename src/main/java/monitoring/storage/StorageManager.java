@@ -1,11 +1,16 @@
 package monitoring.storage;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StorageManager {
+    private static final Logger logger = LogManager.getLogger(StorageManager.class);
+
     private AtomicInteger current = new AtomicInteger(0);
     private final List<URL> storages = new ArrayList<>();
 
@@ -36,7 +41,7 @@ public class StorageManager {
         synchronized (storages) {
             if (!storages.contains(storage)) {
                 storages.add(storage);
-            }
+            } else logger.warn("Trying to add storage that is already on list: " + storage);
         }
     }
 }

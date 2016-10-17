@@ -1,12 +1,17 @@
 package monitoring.indexing;
 
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class IndexingManager {
+    private final static Logger logger = LogManager.getLogger(IndexingManager.class);
+
     private AtomicInteger current = new AtomicInteger(0);
     private final List<URL> indexing = new ArrayList<>();
 
@@ -37,7 +42,7 @@ public class IndexingManager {
         synchronized (this.indexing) {
             if (!this.indexing.contains(indexing)) {
                 this.indexing.add(indexing);
-            }
+            } else logger.warn("Trying to add indexing service that is already on list: " + indexing);
         }
     }
 
