@@ -6,7 +6,10 @@ import monitoring.storage.StorageAdapter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -118,7 +121,9 @@ public class IndexingAdapter {
         }
     }
 
-    /** Processes only input messages from indexing service **/
+    /**
+     * Processes only input messages from indexing service
+     **/
     public class IndexingInputAdapter implements Runnable {
         private final Logger logger = LogManager.getLogger(IndexingInputAdapter.class);
 
@@ -167,7 +172,9 @@ public class IndexingAdapter {
         }
     }
 
-    /** Processes only output messages that are needed to be sent to indexing service **/
+    /**
+     * Processes only output messages that are needed to be sent to indexing service
+     **/
     public class IndexingOutputAdapter implements Runnable {
         private final Logger logger = LogManager.getLogger(IndexingOutputAdapter.class);
 

@@ -36,6 +36,7 @@ public class StorageAdapter {
         outputAdapters = new ConcurrentHashMap<>();
         executor = Executors.newCachedThreadPool();
     }
+
     private static StorageAdapter instance;
 
     public static StorageAdapter instance() {
@@ -89,7 +90,9 @@ public class StorageAdapter {
         } else logger.error("No storage output adapter for URL " + target);
     }
 
-    /** Send by round robin **/
+    /**
+     * Send by round robin
+     **/
     public void send(String messageOut) {
         int nextAdapter = robin();
         StorageOutputAdapter outputAdapter = roundRobinAdapters.get(nextAdapter);
@@ -117,7 +120,9 @@ public class StorageAdapter {
         }
     }
 
-    /** Processes only input messages from storage **/
+    /**
+     * Processes only input messages from storage
+     **/
     private class StorageInputAdapter implements Runnable {
         private final Logger logger = LogManager.getLogger(StorageInputAdapter.class);
 
@@ -166,14 +171,18 @@ public class StorageAdapter {
             reader.close();
         }
 
-        /** Is it final message in stream? **/
+        /**
+         * Is it final message in stream?
+         **/
         private boolean isFinalMessage(UUID sessionId, String message) {
             // TODO: 12.10.2016 how to determine if it is the end of stream?
             return false;
         }
     }
 
-    /** Processes only output messages that are needed to be sent to storage service **/
+    /**
+     * Processes only output messages that are needed to be sent to storage service
+     **/
     private class StorageOutputAdapter implements Runnable {
         private final Logger logger = LogManager.getLogger(StorageOutputAdapter.class);
 

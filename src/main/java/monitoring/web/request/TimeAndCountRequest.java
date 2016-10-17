@@ -1,6 +1,6 @@
 package monitoring.web.request;
 
-public class TimeAndCountRequest extends ClientRequest{
+public class TimeAndCountRequest extends ClientRequest {
     private long from;
     private int count;
 

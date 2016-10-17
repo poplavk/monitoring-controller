@@ -8,6 +8,7 @@ public class ClientSessionManager {
     private ConcurrentHashMap<UUID, ClientSession> clientSessions = new ConcurrentHashMap<>();
 
     private static ClientSessionManager instance;
+
     public static ClientSessionManager instance() {
         if (instance == null) {
             instance = new ClientSessionManager();
@@ -15,7 +16,8 @@ public class ClientSessionManager {
         return instance;
     }
 
-    private ClientSessionManager() {}
+    private ClientSessionManager() {
+    }
 
     public void addSession(ClientSession session) {
         clientSessions.put(session.sessionId, session);

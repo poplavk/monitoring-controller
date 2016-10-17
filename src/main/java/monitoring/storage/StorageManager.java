@@ -19,8 +19,8 @@ public class StorageManager {
     }
 
     /**
-     * @throws RuntimeException if storage list is empty
      * @return
+     * @throws RuntimeException if storage list is empty
      */
     public URL nextStorage() {
         if (storages.isEmpty()) throw new RuntimeException("No storages in list!");

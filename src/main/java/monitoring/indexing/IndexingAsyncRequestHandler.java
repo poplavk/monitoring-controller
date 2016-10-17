@@ -1,28 +1,30 @@
 package monitoring.indexing;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import monitoring.storage.StorageAsyncRequestHandler;
 import monitoring.storage.StorageManager;
 import monitoring.storage.StorageResponse;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import monitoring.utils.JsonUtils;
+import monitoring.web.request.ClientRequest;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.asynchttpclient.*;
 
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class IndexingAsyncRequestHandler implements AsyncHandler<List<CompletableFuture<StorageResponse>>> {
     private static final Logger logger = LogManager.getLogger(IndexingAsyncRequestHandler.class);
 
-    private URL storage = StorageManager.instance().nextStorage();
-    private String storageAddress = storage.getHost() + ":" + storage.getPort();
     private List<CompletableFuture<StorageResponse>> storageFutures = new ArrayList<>();
 
-    private ObjectMapper mapper = new ObjectMapper();
+    private ClientRequest clientRequest;
 
-    public IndexingAsyncRequestHandler() {
+    public IndexingAsyncRequestHandler(ClientRequest request) {
+        this.clientRequest = request;
     }
 
     @Override
@@ -32,29 +34,43 @@ public class IndexingAsyncRequestHandler implements AsyncHandler<List<Completabl
 
     @Override
     public State onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
-        // when we receive a piece of data(chunk) from indexing service, we create separate request to storage
-        // service with this piece and handle it as a separate request, the only common thing between chunks is buffer.
+        String str = new String(bodyPart.getBodyPartBytes(), Charset.forName("UTF-8"));
+        logger.debug("String representation: " + str);
+        if (!bodyPart.isLast()) {
+            List<String> splitted = new ArrayList<>(Arrays.asList(str.split("@")));
+            splitted.forEach(s -> {
+                IndexingResponse response = JsonUtils.indexingResponse(s);
+                logger.info("POJO representation: " + response);
 
-        IndexingResponse response = mapper.readValue(bodyPart.getBodyPartBytes(), IndexingResponse.class);
+                CompletableFuture<StorageResponse> f = new CompletableFuture<>();
+                storageFutures.add(f);
 
-        CompletableFuture<StorageResponse> f = new CompletableFuture<>();
-        storageFutures.add(f);
+                AsyncHttpClient client = new DefaultAsyncHttpClient();
+                String url = makeStorageUrl(response);
+                String body = makeRequestBody(response);
+                logger.debug("URL for request to storage: " + url);
+                logger.debug("Body for request to storage: " + body);
+                client.prepareGet(url).setBody(body).execute(new StorageAsyncRequestHandler(f));
+            });
+        }
 
-        AsyncHttpClient client = new DefaultAsyncHttpClient();
-        client.prepareGet(makeStorageUrl(response)).setBody(makeRequestBody(response)).execute(new StorageAsyncRequestHandler(f));
         return State.CONTINUE;
     }
 
     private String makeStorageUrl(IndexingResponse indexingResponse) {
-        return ""; // todo finish making storage URL
+        logger.trace("makeStorageUrl called");
+        URL storage = StorageManager.instance().nextStorage();
+        String storageAddress = "http://" + storage.getHost() + ":" + storage.getPort() + "/";
+        return storageAddress + "test";
     }
 
     private String makeRequestBody(IndexingResponse indexingResponse) {
-        return ""; // todo finish making storage request body
+        return String.join(",", Arrays.asList(indexingResponse.getData()));
     }
 
     @Override
     public State onStatusReceived(HttpResponseStatus responseStatus) throws Exception {
+        logger.debug("Received status " + responseStatus.getStatusCode() + " from " + responseStatus.getRemoteAddress());
         if (responseStatus.getStatusCode() != 200) {
             logger.error("Status is " + responseStatus.getStatusCode());
             return State.ABORT;
@@ -65,6 +81,7 @@ public class IndexingAsyncRequestHandler implements AsyncHandler<List<Completabl
 
     @Override
     public State onHeadersReceived(HttpResponseHeaders headers) throws Exception {
+        logger.debug("Received headers " + headers.getHeaders().entries());
         return State.CONTINUE;
     }
 

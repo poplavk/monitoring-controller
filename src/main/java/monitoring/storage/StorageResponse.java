@@ -1,15 +1,25 @@
 package monitoring.storage;
 
 public class StorageResponse {
-    private DataUnit[] data;
+    private String status;
+    private String[] data;
 
-    public DataUnit[] getData() {
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String[] getData() {
         return data;
     }
 
-    public void setData(DataUnit[] data) {
+    public void setData(String[] data) {
         this.data = data;
     }
+
 
     public class DataUnit {
         private String key;
