@@ -11,15 +11,18 @@ import monitoring.web.request.TimeAndCountRequest;
 import monitoring.web.request.TimeRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.asynchttpclient.*;
 import spark.Spark;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static spark.Spark.get;
@@ -160,6 +163,133 @@ public class AppInitializer {
                 }
             }
         });
+
+        /* Online analytics methods **/
+
+        get("/onlineStart", (req, res) -> {
+            String online = nextOnline();
+            if (online == null) {
+                logger.error("No online on list");
+                res.status(500);
+                return "No online on list";
+            } else online = online + "start";
+
+            AsyncHttpClient client = new DefaultAsyncHttpClient();
+            logger.debug("URL for requesting online analytics service: " + online);
+            ListenableFuture<String> requestFuture = client.prepareGet(online).execute(new AsyncCompletionHandler<String>() {
+                @Override
+                public String onCompleted(Response response) throws Exception {
+                    return response.getResponseBody(Charset.forName("UTF-8"));
+                }
+            });
+
+            String response = null;
+            try {
+                response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                response = "Request timed out";
+                logger.error(response);
+            }
+            return response;
+        });
+
+        get("/onlineStop/:id", (req, res) -> {
+            String id = req.params(":id");
+            if (id == null) {
+                return "Parameter id is not specified";
+            } else {
+                String online = nextOnline();
+                if (online == null) {
+                    logger.error("No online on list");
+                    res.status(500);
+                    return "No online on list";
+                } else online = online + "/stop/" + id;
+
+                AsyncHttpClient client = new DefaultAsyncHttpClient();
+                logger.debug("URL for requesting indexing service: " + online);
+                ListenableFuture<String> requestFuture = client.prepareGet(online).execute(new AsyncCompletionHandler<String>() {
+                    @Override
+                    public String onCompleted(Response response) throws Exception {
+                        return response.getResponseBody(Charset.forName("UTF-8"));
+                    }
+                });
+
+                String response = null;
+                try {
+                    response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
+                } catch (TimeoutException e) {
+                    response = "Request timed out";
+                    logger.error(response);
+                }
+                return response;
+            }
+        });
+
+        get("/onlineStatus", (req, res) -> {
+            String online = nextOnline();
+            if (online == null) {
+                logger.error("No online on list");
+                res.status(500);
+                return "No online on list";
+            } else online = online + "/status";
+
+            AsyncHttpClient client = new DefaultAsyncHttpClient();
+            logger.debug("URL for requesting indexing service: " + online);
+            ListenableFuture<String> requestFuture = client.prepareGet(online).execute(new AsyncCompletionHandler<String>() {
+                @Override
+                public String onCompleted(Response response) throws Exception {
+                    return response.getResponseBody(Charset.forName("UTF-8"));
+                }
+            });
+
+            String response = null;
+            try {
+                response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                response = "Request timed out";
+                logger.error(response);
+            }
+            return response;
+        });
+
+        get("onlineStatus/:id", (req, res) -> {
+            String id = req.params(":id");
+            if (id == null) {
+                return "Parameter id is not specified";
+            } else {
+                String online = nextOnline();
+                if (online == null) {
+                    logger.error("No online on list");
+                    res.status(500);
+                    return "No online on list";
+                } else online = online + "/status/" + id;
+
+                AsyncHttpClient client = new DefaultAsyncHttpClient();
+                logger.debug("URL for requesting indexing service: " + online);
+                ListenableFuture<String> requestFuture = client.prepareGet(online).execute(new AsyncCompletionHandler<String>() {
+                    @Override
+                    public String onCompleted(Response response) throws Exception {
+                        return response.getResponseBody(Charset.forName("UTF-8"));
+                    }
+                });
+
+                String response = null;
+                try {
+                    response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
+                } catch (TimeoutException e) {
+                    response = "Request timed out";
+                    logger.error(response);
+                }
+                return response;
+            }
+        });
+
+        /** ===========END ONLINE ANALYTICS METHODS ===================**/
+    }
+
+    private String nextOnline() {
+        URL raw = OnlineAnalyticsManager.instance().next();
+        return "http://" +  raw.getHost() + ":" + raw.getPort() + "/";
     }
 
     private void setup() {
