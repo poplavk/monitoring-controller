@@ -2,6 +2,7 @@ package monitoring;
 
 import monitoring.config.Configuration;
 import monitoring.dataconsuming.DataConsumingHandler;
+import monitoring.offline.OfflineHandler;
 import monitoring.online.OnlineHandler;
 import monitoring.storage.StorageResponse;
 import monitoring.utils.JsonUtils;
@@ -194,240 +195,17 @@ public class AppInitializer {
 
 
         /** =========== OFFLINE ANALYTICS METHODS ===================**/
-        get("/offlineStatus", (req, res) -> {
-            String url = nextOffline();
-            if (url == null) {
-                logger.error("No offline analytics on list");
-                res.status(500);
-                return "No offline analytics on list";
-            } else url = url + "status";
+        OfflineHandler offlineHandler = new OfflineHandler(offlineManager);
 
-            AsyncHttpClient client = new DefaultAsyncHttpClient();
-            logger.debug("URL for requesting offline analytics service: " + url);
-            ListenableFuture<String> requestFuture = client.prepareGet(url).execute(new AsyncCompletionHandler<String>() {
-                @Override
-                public String onCompleted(Response response) throws Exception {
-                    return response.getResponseBody(Charset.forName("UTF-8"));
-                }
-            });
+        get("/offlineStatus", (req, res) -> offlineHandler.handle("/offlineStatus", req, res));
+        get("/offlineStart", (req, res) -> offlineHandler.handle("/offlineStart", req, res));
+        get("/offlineStop", (req, res) -> offlineHandler.handle("/offlineStop", req, res));
+        get("/offlineNewTask", (req, res) -> offlineHandler.handle("/offlineNewTask", req, res));
+        get("/offlineTask/:id/discard", (req, res) -> offlineHandler.handle("/offlineTask/:id/discard", req, res));
+        get("/offlineTask/:id/status", (req, res) -> offlineHandler.handle("/offlineTask/:id/status", req, res));
+        get("/offlineTask/:id/result", (req, res) -> offlineHandler.handle("/offlineTask/:id/result", req, res));
 
-            String response = null;
-            try {
-                response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
-                response = "Request timed out";
-                logger.error(response);
-            }
-            return response;
-        });
-
-        get("/offlineStart", (req, res) -> {
-            String url = nextOffline();
-            if (url == null) {
-                logger.error("No offline analytics on list");
-                res.status(500);
-                return "No offline analytics on list";
-            } else url = url + "start";
-
-            AsyncHttpClient client = new DefaultAsyncHttpClient();
-            logger.debug("URL for requesting offline analytics service: " + url);
-            ListenableFuture<String> requestFuture = client.prepareGet(url).execute(new AsyncCompletionHandler<String>() {
-                @Override
-                public String onCompleted(Response response) throws Exception {
-                    return response.getResponseBody(Charset.forName("UTF-8"));
-                }
-            });
-
-            String response = null;
-            try {
-                response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
-                response = "Request timed out";
-                logger.error(response);
-            }
-            return response;
-        });
-
-        get("/offlineStop", (req, res) -> {
-            String url = nextOffline();
-            if (url == null) {
-                logger.error("No offline analytics on list");
-                res.status(500);
-                return "No offline analytics on list";
-            } else url = url + "stop";
-
-            AsyncHttpClient client = new DefaultAsyncHttpClient();
-            logger.debug("URL for requesting offline analytics service: " + url);
-            ListenableFuture<String> requestFuture = client.prepareGet(url).execute(new AsyncCompletionHandler<String>() {
-                @Override
-                public String onCompleted(Response response) throws Exception {
-                    return response.getResponseBody(Charset.forName("UTF-8"));
-                }
-            });
-
-            String response = null;
-            try {
-                response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
-                response = "Request timed out";
-                logger.error(response);
-            }
-            return response;
-        });
-
-        get("/offlineNewTask", (req, res) -> {
-            String task = req.queryParams("task");
-            String metric = req.queryParams("metric");
-            String from = req.queryParams("from");
-            String to = req.queryParams("to");
-            String calcStart = req.queryParams("calcStart");
-
-            String url = nextOffline();
-            if (url == null) {
-                logger.error("No offline analytics on list");
-                res.status(500);
-                return "No offline analytics on list";
-            } else
-                url = url + "task/new?task=" + task + "&" + "metric=" + metric + "&" + "from=" + from + "&" + "to=" + to + "&" + "calcStart=" + calcStart;
-
-            AsyncHttpClient client = new DefaultAsyncHttpClient();
-            logger.debug("URL for requesting offline analytics service: " + url);
-            ListenableFuture<String> requestFuture = client.prepareGet(url).execute(new AsyncCompletionHandler<String>() {
-                @Override
-                public String onCompleted(Response response) throws Exception {
-                    return response.getResponseBody(Charset.forName("UTF-8"));
-                }
-            });
-
-            String response = null;
-            try {
-                response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
-                response = "Request timed out";
-                logger.error(response);
-            }
-            return response;
-        });
-
-        get("/offlineTask/:id/discard", (req, res) -> {
-            String id = req.params(":id");
-            if (id == null) {
-                logger.error("No id parameter in task discard request");
-                res.status(400);
-                return "No id parameter";
-            }
-
-            String url = nextOffline();
-            if (url == null) {
-                logger.error("No offline analytics on list");
-                res.status(500);
-                return "No offline analytics on list";
-            } else url = url + "task/" + id + "/discard";
-
-            AsyncHttpClient client = new DefaultAsyncHttpClient();
-            logger.debug("URL for requesting offline analytics service: " + url);
-            ListenableFuture<String> requestFuture = client.prepareGet(url).execute(new AsyncCompletionHandler<String>() {
-                @Override
-                public String onCompleted(Response response) throws Exception {
-                    return response.getResponseBody(Charset.forName("UTF-8"));
-                }
-            });
-
-            String response = null;
-            try {
-                response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
-                response = "Request timed out";
-                logger.error(response);
-            }
-            return response;
-        });
-
-        get("/offlineTask/:id/status", (req, res) -> {
-            String id = req.params(":id");
-            if (id == null) {
-                logger.error("No id parameter in task status request");
-                res.status(400);
-                return "No id parameter";
-            }
-
-            String url = nextOffline();
-            if (url == null) {
-                logger.error("No offline analytics on list");
-                res.status(500);
-                return "No offline analytics on list";
-            } else url = url + "task/" + id + "/status";
-
-            AsyncHttpClient client = new DefaultAsyncHttpClient();
-            logger.debug("URL for requesting offline analytics service: " + url);
-            ListenableFuture<String> requestFuture = client.prepareGet(url).execute(new AsyncCompletionHandler<String>() {
-                @Override
-                public String onCompleted(Response response) throws Exception {
-                    return response.getResponseBody(Charset.forName("UTF-8"));
-                }
-            });
-
-            String response = null;
-            try {
-                response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
-                response = "Request timed out";
-                logger.error(response);
-            }
-            return response;
-        });
-
-        get("/offlineTask/:id/status", (req, res) -> {
-            String id = req.params(":id");
-            if (id == null) {
-                logger.error("No id parameter in task result request");
-                res.status(400);
-                return "No id parameter";
-            }
-
-            String url = nextOffline();
-            if (url == null) {
-                logger.error("No offline analytics on list");
-                res.status(500);
-                return "No offline analytics on list";
-            } else url = url + "task/" + id + "/result";
-
-            AsyncHttpClient client = new DefaultAsyncHttpClient();
-            logger.debug("URL for requesting offline analytics service: " + url);
-            ListenableFuture<String> requestFuture = client.prepareGet(url).execute(new AsyncCompletionHandler<String>() {
-                @Override
-                public String onCompleted(Response response) throws Exception {
-                    return response.getResponseBody(Charset.forName("UTF-8"));
-                }
-            });
-
-            String response = null;
-            try {
-                response = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
-                response = "Request timed out";
-                logger.error(response);
-            }
-            return response;
-        });
-    }
-
-    private String nextOnline() {
-        URL raw = onlineManager.next();
-        if (raw == null) return null;
-        return "http://" + raw.getHost() + ":" + raw.getPort() + "/";
-    }
-
-    private String nextOffline() {
-        URL raw = offlineManager.next();
-        if (raw == null) return null;
-        return "http://" + raw.getHost() + ":" + raw.getPort() + "/";
-    }
-
-    private String nextData() {
-        URL raw = dataConsumingManager.next();
-        if (raw == null) return null;
-        return "http://" + raw.getHost() + ":" + raw.getPort() + "/";
+        /** =========== END OFFLINE ANALYTICS METHODS ===================**/
     }
 
     private void setup() {

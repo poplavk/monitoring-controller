@@ -28,90 +28,40 @@ public class OnlineHandler {
     public String handle(String method, Request request, Response response) throws ExecutionException, InterruptedException {
         switch (method) {
             case "/onlineStart": {
-                String online = nextOnline();
-                if (online == null) {
-                    logger.error("No online on list");
-                    response.status(500);
-                    return "No online on list";
-                } else online = online + "start";
-
-                AsyncHttpClient client = new DefaultAsyncHttpClient();
-                logger.debug("URL for requesting online analytics service: " + online);
-                ListenableFuture<String> requestFuture = client.prepareGet(online).execute(new AsyncCompletionHandler<String>() {
-                    @Override
-                    public String onCompleted(org.asynchttpclient.Response response) throws Exception {
-                        return response.getResponseBody(Charset.forName("UTF-8"));
-                    }
-                });
-
-                String responseBody = null;
                 try {
-                    responseBody = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-                } catch (TimeoutException e) {
-                    responseBody = "Request timed out";
-                    logger.error(response);
+                    return makeRequest("start/");
+                } catch (RuntimeException e) {
+                    logger.error(e);
+                    response.status(500);
+                    return "Error: " + e.getMessage();
                 }
-                return responseBody;
             }
 
             case "/onlineStop/:id": {
                 String id = request.params(":id");
                 if (id == null) {
+                    logger.error("id is not specified in online stop");
                     response.status(400);
                     return "Parameter id is not specified";
                 }
 
-                String online = nextOnline();
-                if (online == null) {
-                    logger.error("No online on list");
-                    response.status(500);
-                    return "No online on list";
-                } else online = online + "stop/" + id;
-
-                AsyncHttpClient client = new DefaultAsyncHttpClient();
-                logger.debug("URL for requesting indexing service: " + online);
-                ListenableFuture<String> requestFuture = client.prepareGet(online).execute(new AsyncCompletionHandler<String>() {
-                    @Override
-                    public String onCompleted(org.asynchttpclient.Response response) throws Exception {
-                        return response.getResponseBody(Charset.forName("UTF-8"));
-                    }
-                });
-
-                String responseBody = null;
                 try {
-                    responseBody = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-                } catch (TimeoutException e) {
-                    responseBody = "Request timed out";
-                    logger.error(responseBody);
+                    return makeRequest("stop/" + id);
+                } catch (RuntimeException e) {
+                    logger.error(e);
+                    response.status(500);
+                    return "Error: " + e.getMessage();
                 }
-                return responseBody;
             }
 
             case "/onlineStatus": {
-                String online = nextOnline();
-                if (online == null) {
-                    logger.error("No online on list");
-                    response.status(500);
-                    return "No online on list";
-                } else online = online + "status";
-
-                AsyncHttpClient client = new DefaultAsyncHttpClient();
-                logger.debug("URL for requesting indexing service: " + online);
-                ListenableFuture<String> requestFuture = client.prepareGet(online).execute(new AsyncCompletionHandler<String>() {
-                    @Override
-                    public String onCompleted(org.asynchttpclient.Response response) throws Exception {
-                        return response.getResponseBody(Charset.forName("UTF-8"));
-                    }
-                });
-
-                String responseBody = null;
                 try {
-                    responseBody = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-                } catch (TimeoutException e) {
-                    responseBody = "Request timed out";
-                    logger.error(responseBody);
+                    return makeRequest("status/");
+                } catch (RuntimeException e) {
+                    logger.error(e);
+                    response.status(500);
+                    return "Error: " + e.getMessage();
                 }
-                return responseBody;
             }
 
             case "/onlineStatus/:id": {
@@ -121,34 +71,40 @@ public class OnlineHandler {
                     return "Parameter id is not specified";
                 }
 
-                String online = nextOnline();
-                if (online == null) {
-                    logger.error("No online on list");
-                    response.status(500);
-                    return "No online on list";
-                } else online = online + "status/" + id;
-
-                AsyncHttpClient client = new DefaultAsyncHttpClient();
-                logger.debug("URL for requesting indexing service: " + online);
-                ListenableFuture<String> requestFuture = client.prepareGet(online).execute(new AsyncCompletionHandler<String>() {
-                    @Override
-                    public String onCompleted(org.asynchttpclient.Response response) throws Exception {
-                        return response.getResponseBody(Charset.forName("UTF-8"));
-                    }
-                });
-
-                String responseBody = null;
                 try {
-                    responseBody = requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-                } catch (TimeoutException e) {
-                    responseBody = "Request timed out";
-                    logger.error(responseBody);
+                    return makeRequest("status/" + id);
+                } catch (RuntimeException e) {
+                    logger.error(e);
+                    response.status(500);
+                    return "Error: " + e.getMessage();
                 }
-                return responseBody;
             }
 
             default:
                 return "Unknown method";
+        }
+    }
+
+    private String makeRequest(String urlPath) {
+        String baseUrl = nextOnline();
+        if (baseUrl == null) throw new RuntimeException("No online analytics servers on list");
+        else baseUrl = baseUrl + urlPath;
+
+        AsyncHttpClient client = new DefaultAsyncHttpClient();
+        logger.debug("URL for requesting indexing service: " + baseUrl);
+        ListenableFuture<String> requestFuture = client.prepareGet(baseUrl).execute(new AsyncCompletionHandler<String>() {
+            @Override
+            public String onCompleted(org.asynchttpclient.Response response) throws Exception {
+                return response.getResponseBody(Charset.forName("UTF-8"));
+            }
+        });
+
+        try {
+            return requestFuture.get(5000L, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            throw new RuntimeException("Request timed out");
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Unexpected exception", e);
         }
     }
 
