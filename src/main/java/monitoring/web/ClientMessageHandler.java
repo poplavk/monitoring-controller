@@ -1,8 +1,8 @@
 package monitoring.web;
 
+import monitoring.ServerManager;
 import monitoring.config.Configuration;
 import monitoring.indexing.IndexingAsyncRequestHandler;
-import monitoring.indexing.IndexingManager;
 import monitoring.storage.StorageResponse;
 import monitoring.web.request.ClientRequest;
 import monitoring.web.request.TimeAndCountRequest;
@@ -25,13 +25,22 @@ public class ClientMessageHandler {
     private static final Logger logger = LogManager.getLogger(ClientMessageHandler.class);
 
     private Configuration config;
-    public ClientMessageHandler(Configuration config) { this.config = config; }
+    private ServerManager indexingManager;
+    private ServerManager storageManager;
+
+    public ClientMessageHandler(Configuration config, ServerManager indexingManager, ServerManager storageManager) {
+        this.config = config;
+        this.indexingManager = indexingManager;
+        this.storageManager = storageManager;
+    }
 
     public List<StorageResponse> handle(ClientRequest request) throws InterruptedException, ExecutionException, TimeoutException {
-        IndexingAsyncRequestHandler handler = new IndexingAsyncRequestHandler(request);
+        IndexingAsyncRequestHandler handler = new IndexingAsyncRequestHandler(request, storageManager);
 
         AsyncHttpClient client = new DefaultAsyncHttpClient();
         String url = makeIndexURL(request);
+        if (url == null) throw new RuntimeException("No indexing servers on list");
+
         logger.debug("URL for requesting indexing service: " + url);
         ListenableFuture<List<CompletableFuture<StorageResponse>>> requestFuture = client.prepareGet(url).execute(handler);
 
@@ -48,7 +57,9 @@ public class ClientMessageHandler {
     }
 
     private String makeIndexURL(ClientRequest clientRequest) {
-        URL url = IndexingManager.instance().nextIndexing();
+        URL url = indexingManager.next();
+        if (url == null) return null;
+
         if (clientRequest instanceof TimeRequest) {
             TimeRequest request = (TimeRequest) clientRequest;
             return "http://" + url.getHost() + ":" + url.getPort() + "/" + "getdata?" + "starttime=" + request.getFrom() + "&" + "endtime=" + request.getTo();

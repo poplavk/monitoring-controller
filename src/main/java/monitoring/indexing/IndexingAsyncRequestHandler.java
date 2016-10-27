@@ -1,7 +1,7 @@
 package monitoring.indexing;
 
+import monitoring.ServerManager;
 import monitoring.storage.StorageAsyncRequestHandler;
-import monitoring.storage.StorageManager;
 import monitoring.storage.StorageResponse;
 import monitoring.utils.JsonUtils;
 import monitoring.web.request.ClientRequest;
@@ -22,9 +22,11 @@ public class IndexingAsyncRequestHandler implements AsyncHandler<List<Completabl
     private List<CompletableFuture<StorageResponse>> storageFutures = new ArrayList<>();
 
     private ClientRequest clientRequest;
+    private ServerManager storageManager;
 
-    public IndexingAsyncRequestHandler(ClientRequest request) {
+    public IndexingAsyncRequestHandler(ClientRequest request, ServerManager storageManager) {
         this.clientRequest = request;
+        this.storageManager = storageManager;
     }
 
     @Override
@@ -47,6 +49,10 @@ public class IndexingAsyncRequestHandler implements AsyncHandler<List<Completabl
 
                 AsyncHttpClient client = new DefaultAsyncHttpClient();
                 String url = makeStorageUrl(response);
+                if (url == null) {
+                    throw new RuntimeException("No storage URL");
+                }
+
                 String body = makeRequestBody(response);
                 logger.debug("URL for request to storage: " + url);
                 logger.debug("Body for request to storage: " + body);
@@ -59,7 +65,10 @@ public class IndexingAsyncRequestHandler implements AsyncHandler<List<Completabl
 
     private String makeStorageUrl(IndexingResponse indexingResponse) {
         logger.trace("makeStorageUrl called");
-        URL storage = StorageManager.instance().nextStorage();
+        URL storage = storageManager.next();
+        if (storage == null) {
+            return null;
+        }
         String storageAddress = "http://" + storage.getHost() + ":" + storage.getPort() + "/";
         return storageAddress + "test";
     }
