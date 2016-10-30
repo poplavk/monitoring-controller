@@ -1,7 +1,7 @@
 package monitoring.indexing.stub;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import monitoring.indexing.IndexingResponse;
+import monitoring.indexing.IndexingResponseChunk;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -13,6 +13,7 @@ import static spark.Spark.*;
 public class IndexingStub {
     private static final Logger logger = LogManager.getLogger(IndexingStub.class);
 
+    // TODO: 30.10.2016 needs fixing with new API formats
     public static void main(String[] args) {
         final String fromField = "starttime";
         final String toField = "endtime";
@@ -29,9 +30,8 @@ public class IndexingStub {
 
             if (toParam != null) {
                 logger.debug("Received request with non-null " + toField + " request field");
-                IndexingResponse response = new IndexingResponse();
-                response.setStatus("ok");
-                response.setData(new String[]{toParam});
+                IndexingResponseChunk response = new IndexingResponseChunk();
+                response.setKey("testKey");
 
                 res.status(200);
                 String responseString = objectMapper.writeValueAsString(response);
@@ -41,17 +41,14 @@ public class IndexingStub {
             } else if (countParam != null) {
                 logger.debug("Received request with non-null " + countField + " request field");
 
-                IndexingResponse response1 = new IndexingResponse();
-                response1.setStatus("ok");
-                response1.setData(new String[]{fromParam, countParam});
+                IndexingResponseChunk response1 = new IndexingResponseChunk();
+                response1.setKey("testKey1");
 
-                IndexingResponse response2 = new IndexingResponse();
-                response2.setStatus("error");
-                response2.setData(new String[]{fromParam, countParam});
+                IndexingResponseChunk response2 = new IndexingResponseChunk();
+                response2.setKey("testKey2");
 
-                IndexingResponse response3 = new IndexingResponse();
-                response3.setStatus("error");
-                response3.setData(new String[]{fromParam, countParam});
+                IndexingResponseChunk response3 = new IndexingResponseChunk();
+                response3.setKey("testKey3");
 
                 res.status(200);
                 String responseString1 = objectMapper.writeValueAsString(response1);

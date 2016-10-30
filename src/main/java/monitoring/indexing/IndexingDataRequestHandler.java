@@ -4,7 +4,6 @@ import monitoring.ServerManager;
 import monitoring.storage.StorageAsyncRequestHandler;
 import monitoring.storage.StorageResponse;
 import monitoring.utils.JsonUtils;
-import monitoring.web.request.ClientRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asynchttpclient.*;
@@ -16,16 +15,20 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class IndexingAsyncRequestHandler implements AsyncHandler<List<CompletableFuture<StorageResponse>>> {
-    private static final Logger logger = LogManager.getLogger(IndexingAsyncRequestHandler.class);
+/**
+ * Класс, отвечающий за поточную обработку ответа от сервиса индексации. При получении очередной части ответа,
+ * пытается разделить полученную строку по символу @, после чего для каждого полученного элемента делает запрос
+ * к сервису хранения данных и добавляет во внутренний список футуру. После того, как получит полностью ответ от сервиса
+ * индексации, возвращает список футур, по которым можно получить ответы от сервиса хранения.
+ */
+public class IndexingDataRequestHandler implements AsyncHandler<List<CompletableFuture<StorageResponse>>> {
+    private static final Logger logger = LogManager.getLogger(IndexingDataRequestHandler.class);
 
     private List<CompletableFuture<StorageResponse>> storageFutures = new ArrayList<>();
 
-    private ClientRequest clientRequest;
     private ServerManager storageManager;
 
-    public IndexingAsyncRequestHandler(ClientRequest request, ServerManager storageManager) {
-        this.clientRequest = request;
+    public IndexingDataRequestHandler(ServerManager storageManager) {
         this.storageManager = storageManager;
     }
 
@@ -41,40 +44,32 @@ public class IndexingAsyncRequestHandler implements AsyncHandler<List<Completabl
         if (!bodyPart.isLast()) {
             List<String> splitted = new ArrayList<>(Arrays.asList(str.split("@")));
             splitted.forEach(s -> {
-                IndexingResponse response = JsonUtils.indexingResponse(s);
+                IndexingResponseChunk response = JsonUtils.indexingResponse(s);
                 logger.info("POJO representation: " + response);
-
-                CompletableFuture<StorageResponse> f = new CompletableFuture<>();
-                storageFutures.add(f);
-
-                AsyncHttpClient client = new DefaultAsyncHttpClient();
                 String url = makeStorageUrl(response);
                 if (url == null) {
-                    throw new RuntimeException("No storage URL");
-                }
+                    logger.error("No storage on list while receiving part of indexing response");
+                } else {
+                    logger.debug("URL for request to storage: " + url);
 
-                String body = makeRequestBody(response);
-                logger.debug("URL for request to storage: " + url);
-                logger.debug("Body for request to storage: " + body);
-                client.prepareGet(url).setBody(body).execute(new StorageAsyncRequestHandler(f));
+                    CompletableFuture<StorageResponse> f = new CompletableFuture<>();
+                    storageFutures.add(f);
+
+                    new DefaultAsyncHttpClient().prepareGet(url).execute(new StorageAsyncRequestHandler(f));
+                }
             });
         }
 
         return State.CONTINUE;
     }
 
-    private String makeStorageUrl(IndexingResponse indexingResponse) {
+    private String makeStorageUrl(IndexingResponseChunk indexingResponse) {
         logger.trace("makeStorageUrl called");
         URL storage = storageManager.next();
         if (storage == null) {
             return null;
         }
-        String storageAddress = "http://" + storage.getHost() + ":" + storage.getPort() + "/";
-        return storageAddress + "test";
-    }
-
-    private String makeRequestBody(IndexingResponse indexingResponse) {
-        return String.join(",", Arrays.asList(indexingResponse.getData()));
+        return "http://" + storage.getHost() + ":" + storage.getPort() + "/key/" + indexingResponse.getKey();
     }
 
     @Override
@@ -91,6 +86,11 @@ public class IndexingAsyncRequestHandler implements AsyncHandler<List<Completabl
     @Override
     public State onHeadersReceived(HttpResponseHeaders headers) throws Exception {
         logger.debug("Received headers " + headers.getHeaders().entries());
+        String status = headers.getHeaders().get("status");
+        if (status != null && !status.equals("ok")) {
+            logger.error("Received not-ok status header from indexing service");
+            return State.ABORT;
+        }
         return State.CONTINUE;
     }
 

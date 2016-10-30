@@ -20,11 +20,6 @@ public class StorageAsyncRequestHandler extends AsyncCompletionHandler<Void> {
 
     @Override
     public Void onCompleted(Response response) throws Exception {
-        // basically we are processing response to request for some piece of data,
-        // i.e. when indexing service gives us chunks of 10 records, we send every single chunk
-        // to storage service and treat chunk as separate request
-        // When we receive response for this request, we mark Future as complete
-        // TODO: 14.10.2016 parse response from storage service
         if (response.getStatusCode() != 200) {
             fut.completeExceptionally(new Exception("Invalid status code " + response.getStatusCode() +
                     " from server " + response.getRemoteAddress() +

@@ -7,6 +7,20 @@ buildscript {
 }
 
 apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'distribution'
+
+distributions {
+    main {
+        contents {
+            into("config") {
+                from ("config")
+            }
+        }
+    }
+}
+
+mainClassName = "monitoring.Application"
 
 jar {
     baseName = 'monitoring-module'

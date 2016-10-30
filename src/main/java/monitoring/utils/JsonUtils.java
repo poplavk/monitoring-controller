@@ -3,7 +3,7 @@ package monitoring.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import monitoring.indexing.IndexingResponse;
+import monitoring.indexing.IndexingResponseChunk;
 import monitoring.storage.StorageResponse;
 
 import java.io.IOException;
@@ -38,10 +38,9 @@ public class JsonUtils {
      * @return
      * @throws RuntimeException if deserialization failed
      */
-    public static IndexingResponse indexingResponse(String string) {
+    public static IndexingResponseChunk indexingResponse(String string) {
         try {
-
-            return mapper.readValue(string, IndexingResponse.class);
+            return mapper.readValue(string, IndexingResponseChunk.class);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

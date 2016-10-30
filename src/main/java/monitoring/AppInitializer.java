@@ -2,35 +2,29 @@ package monitoring;
 
 import monitoring.config.Configuration;
 import monitoring.dataconsuming.DataConsumingHandler;
+import monitoring.indexing.IndexingHandler;
 import monitoring.offline.OfflineHandler;
 import monitoring.online.OnlineHandler;
-import monitoring.storage.StorageResponse;
-import monitoring.utils.JsonUtils;
-import monitoring.web.ClientMessageHandler;
-import monitoring.web.request.ClientRequest;
-import monitoring.web.request.TimeAndCountRequest;
-import monitoring.web.request.TimeRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asynchttpclient.*;
 import spark.Spark;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static spark.Spark.get;
 import static spark.Spark.port;
 
 public class AppInitializer {
     private static final Logger logger = LogManager.getLogger(AppInitializer.class);
+
+    final String fromField = "starttime";
+    final String toField = "endtime";
+    final String countField = "count";
+    final String hostField = "host";
+    final String portField = "port";
 
     private Configuration config;
     private ServerManager dataConsumingManager = new ServerManager("data consuming");
@@ -52,59 +46,6 @@ public class AppInitializer {
     }
 
     private void createRoutes() {
-        final String fromField = "starttime";
-        final String toField = "endtime";
-        final String countField = "count";
-        final String hostField = "host";
-        final String portField = "port";
-
-        get("/getdata", (req, res) -> {
-            Map<String, String> params = req.params();
-            Set<String> queryParams = req.queryParams();
-            logger.info("All parameters: " + params + "," + "query params: " + queryParams);
-            String fromParam = req.queryParams(fromField);
-            String toParam = req.queryParams(toField);
-            String countParam = req.queryParams(countField);
-
-            if (fromParam == null || (toParam == null && countParam == null)) {
-                logger.error("Request from " + req.ip() + " does not contain neccesarry parameters");
-                res.status(400);
-                return "Request does not contain neccessary parameters";
-            }
-            long from = Long.parseLong(fromParam);
-
-            ClientRequest request = null;
-
-            if (toParam != null) {
-                long to = Long.parseLong(toParam);
-                request = new TimeRequest(from, to);
-            } else if (countParam != null) {
-                int count = Integer.parseInt(countParam);
-                request = new TimeAndCountRequest(from, count);
-            } else {
-                logger.error("Unknown request type");
-                res.status(404);
-                return "Unknown request type";
-            }
-
-            ClientMessageHandler handler = new ClientMessageHandler(config, indexingManager, storageManager);
-
-            try {
-                List<StorageResponse> responses = handler.handle(request);
-                String json = JsonUtils.serialize(responses);
-                res.status(200);
-                return json;
-            } catch (RuntimeException e) {
-                logger.error("Error with request", e);
-                res.status(500);
-                return "Error:" + e;
-            } catch (TimeoutException e) {
-                logger.error("Timeout exception", e);
-                res.status(500);
-                return "Timeout exception:" + e;
-            }
-        });
-
         get("/addIndexing", (req, res) -> {
             String host = req.queryParams(hostField);
             String port = req.queryParams(portField);
@@ -170,8 +111,17 @@ public class AppInitializer {
             }
         });
 
-        /** =========== ONLINE ANALYTICS METHODS ===================**/
+        /** =========== INDEXING METHODS ===================**/
+        IndexingHandler handler = new IndexingHandler(config, indexingManager, storageManager);
 
+        get("/data/:timestamp", (req, res) -> handler.handle("/data/:timestamp", req, res));
+        get("/indexCount/:timestamp", (req, res) -> handler.handle("/indexCount/:timestamp", req, res));
+        get("/indexState/:timestamp", (req, res) -> handler.handle("/indexState/:timestamp", req, res));
+        get("/indexKPI", (req, res) -> handler.handle("/indexKPI", req, res));
+
+        /** =========== END INDEXING METHODS ===================**/
+
+        /** =========== ONLINE ANALYTICS METHODS ===================**/
         OnlineHandler onlineHandler = new OnlineHandler(onlineManager);
 
         get("/onlineStart", (req, res) -> onlineHandler.handle("/onlineStart", req, res));

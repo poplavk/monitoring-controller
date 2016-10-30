@@ -12,6 +12,7 @@ import static spark.Spark.port;
 public class StorageStub {
     private static final Logger logger = LogManager.getLogger(StorageStub.class);
 
+    // TODO: 30.10.2016 need fixing with new API formats
     public static void main(String[] args) {
         final String fromField = "starttime";
         final String toField = "endtime";
@@ -29,8 +30,9 @@ public class StorageStub {
             if (toParam != null) {
                 logger.debug("Received request with non-null " + toField + " request field");
                 StorageResponse response = new StorageResponse();
-                response.setStatus("ok");
-                response.setData(new String[]{toParam});
+                response.setKey("testKey");
+                response.setTs("testTs");
+                response.setValue("testValue");
 
                 res.status(200);
                 String responseString = objectMapper.writeValueAsString(response);
@@ -40,8 +42,9 @@ public class StorageStub {
             } else if (countParam != null) {
                 logger.debug("Received request with non-null " + countField + " request field");
                 StorageResponse response = new StorageResponse();
-                response.setStatus("ok");
-                response.setData(new String[]{countParam});
+                response.setKey("testKey");
+                response.setTs("testTs");
+                response.setValue("testValue");
 
                 res.status(200);
                 String responseString = objectMapper.writeValueAsString(response);
@@ -57,8 +60,9 @@ public class StorageStub {
         get("/test", (req, res) -> {
             logger.info("Received request for /test with body: " + req.body());
             StorageResponse response = new StorageResponse();
-            response.setStatus("ok");
-            response.setData(new String[]{req.body()});
+            response.setKey("testKey");
+            response.setTs("testTs");
+            response.setValue("testValue");
 
             res.status(200);
             String responseString = objectMapper.writeValueAsString(response);
