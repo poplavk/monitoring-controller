@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asynchttpclient.AsyncCompletionHandler;
 import org.asynchttpclient.Response;
+import org.eclipse.jetty.http.HttpStatus;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -20,17 +21,21 @@ public class StorageAsyncRequestHandler extends AsyncCompletionHandler<Void> {
 
     @Override
     public Void onCompleted(Response response) throws Exception {
-        if (response.getStatusCode() != 200) {
-            fut.completeExceptionally(new Exception("Invalid status code " + response.getStatusCode() +
-                    " from server " + response.getRemoteAddress() +
-                    ", response body: " + response.getResponseBody()));
+        if (response.getStatusCode() != HttpStatus.OK_200) {
+            fut.completeExceptionally(new Exception(
+                "Invalid status code " + response.getStatusCode() +
+                " from server " + response.getRemoteAddress() +
+                ", response body: " + response.getResponseBody())
+            );
             return null;
         }
 
         String rawBody = response.getResponseBody();
         StorageResponse res = mapper.readValue(rawBody, StorageResponse.class);
 
-        logger.info("Received response from storage " + response.getRemoteAddress() + ":" + rawBody + " with status " + response.getStatusCode());
+        logger.info("Received response from storage " + response.getRemoteAddress() + ":"
+            + rawBody + " with status " + response.getStatusCode()
+        );
         fut.complete(res);
 
         return null;

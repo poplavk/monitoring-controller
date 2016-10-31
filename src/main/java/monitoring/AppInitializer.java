@@ -7,6 +7,7 @@ import monitoring.offline.OfflineHandler;
 import monitoring.online.OnlineHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.jetty.http.HttpStatus;
 import spark.Spark;
 
 import java.io.IOException;
@@ -14,15 +15,14 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 
+import static monitoring.utils.ResponseUtils.getError;
+import static monitoring.utils.ResponseUtils.getOk;
 import static spark.Spark.get;
 import static spark.Spark.port;
 
 public class AppInitializer {
     private static final Logger logger = LogManager.getLogger(AppInitializer.class);
 
-    final String fromField = "starttime";
-    final String toField = "endtime";
-    final String countField = "count";
     final String hostField = "host";
     final String portField = "port";
 
@@ -50,33 +50,26 @@ public class AppInitializer {
             String host = req.queryParams(hostField);
             String port = req.queryParams(portField);
             if (host == null) {
-                String error = "No " + hostField + " parameter";
-                logger.error(error);
-                res.status(400);
-                return error;
+                return getError("No " + hostField + " parameter", HttpStatus.BAD_REQUEST_400, res, logger);
             } else if (port == null) {
-                String error = "No " + portField + " parameter";
-                logger.error(error);
-                res.status(400);
-                return error;
+                return getError("No " + portField + " parameter", HttpStatus.BAD_REQUEST_400, res, logger);
             } else {
                 logger.debug("Received request to add indexing service with host " + host + ":" + port);
                 try {
                     addToManager(indexingManager, host, Integer.parseInt(port));
-                    String response = "Indexing service at URL " + host + ":" + port + " successfully added";
-                    logger.info(response);
-                    res.status(200);
-                    return response;
+                    return getOk(
+                        "Indexing service at URL " + host + ":" + port + " successfully added",
+                        HttpStatus.OK_200, res, logger
+                    );
                 } catch (UnknownHostException e) {
-                    String error = "Unknown host at " + host + ":" + port;
-                    logger.error(error, e);
-                    res.status(500);
-                    return error;
+                    return getError(
+                        "Unknown host at " + host + ":" + port, HttpStatus.INTERNAL_SERVER_ERROR_500, res, logger
+                    );
                 } catch (IOException e) {
-                    logger.error("Error at adding host", e);
-                    String error = "Error adding host " + host + ":" + port + ", exception: " + e;
-                    res.status(500);
-                    return error;
+                    return getError(
+                        "Error adding host " + host + ":" + port + ", exception: " + e,
+                        HttpStatus.INTERNAL_SERVER_ERROR_500, res, logger
+                    );
                 }
             }
         });
@@ -85,28 +78,22 @@ public class AppInitializer {
             String host = req.queryParams(hostField);
             String port = req.queryParams(portField);
             if (host == null) {
-                String error = "No " + hostField + " parameter";
-                logger.error(error);
-                res.status(500);
-                return error;
+                return getError("No " + hostField + " parameter", HttpStatus.INTERNAL_SERVER_ERROR_500, res, logger);
             } else if (port == null) {
-                String error = "No " + portField + " parameter";
-                logger.error(error);
-                res.status(500);
-                return error;
+                return getError("No " + portField + " parameter", HttpStatus.INTERNAL_SERVER_ERROR_500, res, logger);
             } else {
                 logger.debug("Received request to add storage with host " + host + ":" + port);
                 try {
                     addToManager(storageManager, host, Integer.parseInt(port));
-                    String response = "Storage service at URL " + host + ":" + port + " successfully added";
-                    logger.info(response);
-                    res.status(200);
-                    return response;
+                    return getOk(
+                        "Storage service at URL " + host + ":" + port + " successfully added",
+                        HttpStatus.OK_200, res, logger
+                    );
                 } catch (IOException e) {
-                    logger.error("Error at adding host", e);
-                    String error = "Error adding host " + host + ":" + port + ", exception: " + e;
-                    res.status(500);
-                    return error;
+                    return getError(
+                        "Error adding host " + host + ":" + port + ", exception: " + e,
+                        HttpStatus.INTERNAL_SERVER_ERROR_500, res, logger
+                    );
                 }
             }
         });
@@ -158,26 +145,25 @@ public class AppInitializer {
         /** =========== END OFFLINE ANALYTICS METHODS ===================**/
     }
 
+
+
     private void setup() {
         config.storages.forEach(s -> {
-            String host = s.substring(0, s.indexOf(":"));
-            int port = Integer.parseInt(s.substring(s.indexOf(":") + 1));
-            try {
-                addToManager(storageManager, host, port);
-            } catch (IOException e) {
-                logger.error("Error at initial setup of storage @ " + host + ":" + port);
-            }
+            parseAndAddToManager(s, storageManager);
         });
-
         config.indexes.forEach(s -> {
-            String host = s.substring(0, s.indexOf(":"));
-            int port = Integer.parseInt(s.substring(s.indexOf(":") + 1));
-            try {
-                addToManager(indexingManager, host, port);
-            } catch (IOException e) {
-                logger.error("Error at initial setup of indexing @ " + host + ":" + port);
-            }
+            parseAndAddToManager(s, indexingManager);
         });
+    }
+
+    private void parseAndAddToManager(String s, ServerManager manager) {
+        String host = s.substring(0, s.indexOf(":"));
+        int port = Integer.parseInt(s.substring(s.indexOf(":") + 1));
+        try {
+            addToManager(manager, host, port);
+        } catch (IOException e) {
+            logger.error("Error at initial setup of service @ " + host + ":" + port);
+        }
     }
 
     private void addToManager(ServerManager manager, String host, int port) throws IOException {
