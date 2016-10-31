@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ServerManager {
-    private final static Logger logger = LogManager.getLogger(ServerManager.class);
+    private static final Logger logger = LogManager.getLogger(ServerManager.class);
     private final String serviceName;
 
     private AtomicInteger current = new AtomicInteger(0);
@@ -20,7 +20,9 @@ public class ServerManager {
     }
 
     public URL next() {
-        if (servers.isEmpty()) return null;
+        if (servers.isEmpty()) {
+            return null;
+        }
         int idx = current.incrementAndGet();
         if (idx >= servers.size()) {
             current.set(0);
@@ -30,10 +32,16 @@ public class ServerManager {
     }
 
     public void add(URL server) {
-        synchronized (this.servers) {
-            if (!this.servers.contains(server)) {
-                this.servers.add(server);
-            } else logger.warn("Trying to add " + serviceName + " server that is already on list: " + server);
+        synchronized (servers) {
+            if (!servers.contains(server)) {
+                servers.add(server);
+            } else {
+                logger.warn("Trying to add " + serviceName + " server that is already on list: " + server);
+            }
         }
+    }
+
+    public String getServiceName() {
+        return serviceName;
     }
 }

@@ -12,6 +12,8 @@ import java.util.List;
 public class JsonUtils {
     private static ObjectMapper mapper = new ObjectMapper();
 
+    private JsonUtils() { }
+
     /**
      * @param response
      * @return

@@ -7,6 +7,7 @@ import monitoring.utils.JsonUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asynchttpclient.*;
+import org.eclipse.jetty.http.HttpStatus;
 
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -23,6 +24,8 @@ import java.util.concurrent.CompletableFuture;
  */
 public class IndexingDataRequestHandler implements AsyncHandler<List<CompletableFuture<StorageResponse>>> {
     private static final Logger logger = LogManager.getLogger(IndexingDataRequestHandler.class);
+
+    private static final String SEPARATOR = "@";
 
     private List<CompletableFuture<StorageResponse>> storageFutures = new ArrayList<>();
 
@@ -42,7 +45,7 @@ public class IndexingDataRequestHandler implements AsyncHandler<List<Completable
         String str = new String(bodyPart.getBodyPartBytes(), Charset.forName("UTF-8"));
         logger.debug("String representation: " + str);
         if (!bodyPart.isLast()) {
-            List<String> splitted = new ArrayList<>(Arrays.asList(str.split("@")));
+            List<String> splitted = new ArrayList<>(Arrays.asList(str.split(SEPARATOR)));
             splitted.forEach(s -> {
                 IndexingResponseChunk response = JsonUtils.indexingResponse(s);
                 logger.info("POJO representation: " + response);
@@ -74,8 +77,10 @@ public class IndexingDataRequestHandler implements AsyncHandler<List<Completable
 
     @Override
     public State onStatusReceived(HttpResponseStatus responseStatus) throws Exception {
-        logger.debug("Received status " + responseStatus.getStatusCode() + " from " + responseStatus.getRemoteAddress());
-        if (responseStatus.getStatusCode() != 200) {
+        logger.debug(
+            "Received status " + responseStatus.getStatusCode() + " from " + responseStatus.getRemoteAddress()
+        );
+        if (responseStatus.getStatusCode() != HttpStatus.OK_200) {
             logger.error("Status is " + responseStatus.getStatusCode());
             return State.ABORT;
         } else {

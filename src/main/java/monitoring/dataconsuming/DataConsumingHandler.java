@@ -1,96 +1,76 @@
 package monitoring.dataconsuming;
 
+import monitoring.Handler;
 import monitoring.ServerManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asynchttpclient.AsyncCompletionHandler;
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.asynchttpclient.ListenableFuture;
+import org.eclipse.jetty.http.HttpStatus;
 import spark.Request;
 import spark.Response;
 
-import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-public class DataConsumingHandler {
+import static monitoring.utils.ResponseUtils.getError;
+
+public class DataConsumingHandler extends Handler {
     private static final Logger logger = LogManager.getLogger(DataConsumingHandler.class);
-
-    private ServerManager manager;
 
     public DataConsumingHandler(ServerManager manager) {
         this.manager = manager;
     }
 
-    public String handle(String method, Request request, Response response) throws ExecutionException, InterruptedException {
+    public String handle(String method, Request request, Response response)
+        throws ExecutionException, InterruptedException {
         switch (method) {
             case "/dataStatus/:id": {
                 String id = request.params(":id");
                 if (id == null) {
-                    response.status(400);
-                    return "Parameter id is not specified";
+                    return getError("Parameter id is not specified", HttpStatus.BAD_REQUEST_400, response, logger);
                 }
 
                 try {
                     return makeRequest("status/" + id);
                 } catch (RuntimeException e) {
-                    logger.error(e);
-                    response.status(500);
-                    return "Error: " + e.getMessage();
+                    return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
             }
 
             case "/dataStart": {
                 String port = request.queryParams("port");
                 if (port == null) {
-                    logger.error("No port parameter specified");
-                    response.status(400);
-                    return "No port parameter specified";
+                    return getError("No port parameter specified", HttpStatus.BAD_REQUEST_400, response, logger);
                 }
 
                 try {
                     return makeRequest("start/?port=" + port);
                 } catch (RuntimeException e) {
-                    logger.error(e);
-                    response.status(500);
-                    return "Error: " + e.getMessage();
+                    return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
             }
 
             case "/dataStop/:id": {
                 String id = request.params(":id");
                 if (id == null) {
-                    logger.error("No id at stop command");
-                    response.status(400);
-                    return "No id at stop command";
+                    return getError("No id at stop command", HttpStatus.BAD_REQUEST_400, response, logger);
                 }
 
                 try {
                     return makeRequest("stop/" + id);
                 } catch (RuntimeException e) {
-                    logger.error(e);
-                    response.status(500);
-                    return "Error: " + e.getMessage();
+                    return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
             }
 
             case "/dataRestart/:id": {
                 String id = request.params(":id");
                 if (id == null) {
-                    logger.error("No id at stop command");
-                    response.status(400);
-                    return "No id at stop command";
+                    return getError("No id at stop command", HttpStatus.BAD_REQUEST_400, response, logger);
                 }
 
                 try {
                     return makeRequest("restart/" + id);
                 } catch (RuntimeException e) {
-                    logger.error(e);
-                    response.status(500);
-                    return "Error: " + e.getMessage();
+                    return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
             }
 
@@ -98,43 +78,12 @@ public class DataConsumingHandler {
                 try {
                     return makeRequest("allstatus");
                 } catch (RuntimeException e) {
-                    logger.error(e);
-                    response.status(500);
-                    return "Error: " + e.getMessage();
+                    return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
             }
 
             default:
                 return "Unknown method";
         }
-    }
-
-    private String makeRequest(String urlPath) {
-        String baseUrl = nextData();
-        if (baseUrl == null) throw new RuntimeException("No data consuming servers on list");
-        else baseUrl = baseUrl + urlPath;
-
-        AsyncHttpClient client = new DefaultAsyncHttpClient();
-        logger.debug("URL for requesting data consuming service: " + baseUrl);
-        ListenableFuture<String> requestFuture = client.prepareGet(baseUrl).execute(new AsyncCompletionHandler<String>() {
-            @Override
-            public String onCompleted(org.asynchttpclient.Response response) throws Exception {
-                return response.getResponseBody(Charset.forName("UTF-8"));
-            }
-        });
-
-        try {
-            return requestFuture.get(5000L, TimeUnit.MILLISECONDS);
-        } catch (TimeoutException e) {
-            throw new RuntimeException("Request timed out", e);
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Unexpected exception", e);
-        }
-    }
-
-    private String nextData() {
-        URL raw = manager.next();
-        if (raw == null) return null;
-        return "http://" + raw.getHost() + ":" + raw.getPort() + "/";
     }
 }
