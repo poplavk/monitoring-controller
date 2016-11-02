@@ -5,6 +5,7 @@ import monitoring.dataconsuming.DataConsumingHandler;
 import monitoring.indexing.IndexingHandler;
 import monitoring.offline.OfflineHandler;
 import monitoring.online.OnlineHandler;
+import monitoring.storage.StorageHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.http.HttpStatus;
@@ -101,7 +102,7 @@ public class AppInitializer {
         /** =========== INDEXING METHODS ===================**/
         IndexingHandler handler = new IndexingHandler(config, indexingManager, storageManager);
 
-        get("/data/:timestamp", (req, res) -> handler.handle("/data/:timestamp", req, res));
+        get("/indexData/:timestamp", (req, res) -> handler.handle("/indexData/:timestamp", req, res));
         get("/indexCount/:timestamp", (req, res) -> handler.handle("/indexCount/:timestamp", req, res));
         get("/indexState/:timestamp", (req, res) -> handler.handle("/indexState/:timestamp", req, res));
         get("/indexKPI", (req, res) -> handler.handle("/indexKPI", req, res));
@@ -143,6 +144,13 @@ public class AppInitializer {
         get("/offlineTask/:id/result", (req, res) -> offlineHandler.handle("/offlineTask/:id/result", req, res));
 
         /** =========== END OFFLINE ANALYTICS METHODS ===================**/
+
+        /** =========== STORAGE METHODS ===================**/
+        StorageHandler storageHandler = new StorageHandler(storageManager);
+
+        get("/storageData", (req, res) -> storageHandler.handle("/storageData", req, res));
+
+        /** =========== END STORAGE METHODS ===================**/
     }
 
 
