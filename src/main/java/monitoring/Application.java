@@ -33,8 +33,6 @@ public class Application {
             System.exit(1);
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            initializer.stop();
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread(initializer::stop));
     }
 }

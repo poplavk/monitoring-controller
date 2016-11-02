@@ -9,6 +9,8 @@ import monitoring.storage.StorageHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.http.HttpStatus;
+import spark.Request;
+import spark.Response;
 import spark.Spark;
 
 import java.io.IOException;
@@ -47,58 +49,6 @@ public class AppInitializer {
     }
 
     private void createRoutes() {
-        get("/addIndexing", (req, res) -> {
-            String host = req.queryParams(hostField);
-            String port = req.queryParams(portField);
-            if (host == null) {
-                return getError("No " + hostField + " parameter", HttpStatus.BAD_REQUEST_400, res, logger);
-            } else if (port == null) {
-                return getError("No " + portField + " parameter", HttpStatus.BAD_REQUEST_400, res, logger);
-            } else {
-                logger.debug("Received request to add indexing service with host " + host + ":" + port);
-                try {
-                    addToManager(indexingManager, host, Integer.parseInt(port));
-                    return getOk(
-                        "Indexing service at URL " + host + ":" + port + " successfully added",
-                        HttpStatus.OK_200, res, logger
-                    );
-                } catch (UnknownHostException e) {
-                    return getError(
-                        "Unknown host at " + host + ":" + port, HttpStatus.INTERNAL_SERVER_ERROR_500, res, logger
-                    );
-                } catch (IOException e) {
-                    return getError(
-                        "Error adding host " + host + ":" + port + ", exception: " + e,
-                        HttpStatus.INTERNAL_SERVER_ERROR_500, res, logger
-                    );
-                }
-            }
-        });
-
-        get("/addStorage", (req, res) -> {
-            String host = req.queryParams(hostField);
-            String port = req.queryParams(portField);
-            if (host == null) {
-                return getError("No " + hostField + " parameter", HttpStatus.INTERNAL_SERVER_ERROR_500, res, logger);
-            } else if (port == null) {
-                return getError("No " + portField + " parameter", HttpStatus.INTERNAL_SERVER_ERROR_500, res, logger);
-            } else {
-                logger.debug("Received request to add storage with host " + host + ":" + port);
-                try {
-                    addToManager(storageManager, host, Integer.parseInt(port));
-                    return getOk(
-                        "Storage service at URL " + host + ":" + port + " successfully added",
-                        HttpStatus.OK_200, res, logger
-                    );
-                } catch (IOException e) {
-                    return getError(
-                        "Error adding host " + host + ":" + port + ", exception: " + e,
-                        HttpStatus.INTERNAL_SERVER_ERROR_500, res, logger
-                    );
-                }
-            }
-        });
-
         /** =========== INDEXING METHODS ===================**/
         IndexingHandler handler = new IndexingHandler(config, indexingManager, storageManager);
 
@@ -151,6 +101,38 @@ public class AppInitializer {
         get("/storageData", (req, res) -> storageHandler.handle("/storageData", req, res));
 
         /** =========== END STORAGE METHODS ===================**/
+
+        /** =========== ADD METHODS ===================**/
+        get("/addIndexing", (req, res) -> addNode(indexingManager, req, res));
+        get("/addStorage", (req, res) -> addNode(storageManager, req, res));
+        get("/addOffline", (req, res) -> addNode(offlineManager, req, res));
+        get("/addOnline", (req, res) -> addNode(onlineManager, req, res));
+        get("/addDataConsumer", (req, res) -> addNode(dataConsumingManager, req, res));
+        /** =========== END ADD METHODS ===================**/
+    }
+
+    private String addNode(ServerManager manager, Request request, Response response) {
+        String host = request.queryParams(hostField);
+        String port = request.queryParams(portField);
+        if (host == null) {
+            return getError("No " + hostField + " parameter", HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
+        } else if (port == null) {
+            return getError("No " + portField + " parameter", HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
+        } else {
+            logger.debug("Received request to add " + manager.getServiceName() + " with host " + host + ":" + port);
+            try {
+                addToManager(manager, host, Integer.parseInt(port));
+                return getOk(
+                        manager.getServiceName() + " at URL " + host + ":" + port + " successfully added",
+                        HttpStatus.OK_200, response, logger
+                );
+            } catch (IOException e) {
+                return getError(
+                        "Error adding host " + host + ":" + port + ", exception: " + e,
+                        HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
+                );
+            }
+        }
     }
 
 
