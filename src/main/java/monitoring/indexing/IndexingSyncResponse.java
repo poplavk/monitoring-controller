@@ -6,7 +6,7 @@ public class IndexingSyncResponse {
     private String status;
     private String timestamp;
     private String count;
-    private List<IndexingResponseChunk> keys;
+    private List<IndexingResponsePart> keys;
 
     public String getStatus() {
         return status;
@@ -32,11 +32,11 @@ public class IndexingSyncResponse {
         this.count = count;
     }
 
-    public List<IndexingResponseChunk> getKeys() {
+    public List<IndexingResponsePart> getKeys() {
         return keys;
     }
 
-    public void setKeys(List<IndexingResponseChunk> keys) {
+    public void setKeys(List<IndexingResponsePart> keys) {
         this.keys = keys;
     }
 }

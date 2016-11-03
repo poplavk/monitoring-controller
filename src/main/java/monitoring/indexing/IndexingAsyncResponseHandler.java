@@ -22,8 +22,8 @@ import java.util.concurrent.CompletableFuture;
  * к сервису хранения данных и добавляет во внутренний список футуру. После того, как получит полностью ответ от сервиса
  * индексации, возвращает список футур, по которым можно получить ответы от сервиса хранения.
  */
-public class IndexingDataRequestHandler implements AsyncHandler<List<CompletableFuture<StorageResponse>>> {
-    private static final Logger logger = LogManager.getLogger(IndexingDataRequestHandler.class);
+public class IndexingAsyncResponseHandler implements AsyncHandler<List<CompletableFuture<StorageResponse>>> {
+    private static final Logger logger = LogManager.getLogger(IndexingAsyncResponseHandler.class);
 
     private static final String SEPARATOR = "@";
 
@@ -31,7 +31,7 @@ public class IndexingDataRequestHandler implements AsyncHandler<List<Completable
 
     private ServerManager storageManager;
 
-    public IndexingDataRequestHandler(ServerManager storageManager) {
+    public IndexingAsyncResponseHandler(ServerManager storageManager) {
         this.storageManager = storageManager;
     }
 
@@ -47,7 +47,7 @@ public class IndexingDataRequestHandler implements AsyncHandler<List<Completable
         if (!bodyPart.isLast()) {
             List<String> splitted = new ArrayList<>(Arrays.asList(str.split(SEPARATOR)));
             splitted.forEach(s -> {
-                IndexingResponseChunk response = JsonUtils.indexingResponse(s);
+                IndexingResponsePart response = JsonUtils.indexingResponse(s);
                 logger.info("POJO representation: " + response);
                 String url = makeStorageUrl(response);
                 if (url == null) {
@@ -66,7 +66,7 @@ public class IndexingDataRequestHandler implements AsyncHandler<List<Completable
         return State.CONTINUE;
     }
 
-    private String makeStorageUrl(IndexingResponseChunk indexingResponse) {
+    private String makeStorageUrl(IndexingResponsePart indexingResponse) {
         logger.trace("makeStorageUrl called");
         URL storage = storageManager.next();
         if (storage == null) {

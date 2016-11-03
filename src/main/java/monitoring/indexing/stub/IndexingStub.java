@@ -1,7 +1,7 @@
 package monitoring.indexing.stub;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import monitoring.indexing.IndexingResponseChunk;
+import monitoring.indexing.IndexingResponsePart;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -30,7 +30,7 @@ public class IndexingStub {
 
             if (toParam != null) {
                 logger.debug("Received request with non-null " + toField + " request field");
-                IndexingResponseChunk response = new IndexingResponseChunk();
+                IndexingResponsePart response = new IndexingResponsePart();
                 response.setKey("testKey");
 
                 res.status(200);
@@ -41,13 +41,13 @@ public class IndexingStub {
             } else if (countParam != null) {
                 logger.debug("Received request with non-null " + countField + " request field");
 
-                IndexingResponseChunk response1 = new IndexingResponseChunk();
+                IndexingResponsePart response1 = new IndexingResponsePart();
                 response1.setKey("testKey1");
 
-                IndexingResponseChunk response2 = new IndexingResponseChunk();
+                IndexingResponsePart response2 = new IndexingResponsePart();
                 response2.setKey("testKey2");
 
-                IndexingResponseChunk response3 = new IndexingResponseChunk();
+                IndexingResponsePart response3 = new IndexingResponsePart();
                 response3.setKey("testKey3");
 
                 res.status(200);

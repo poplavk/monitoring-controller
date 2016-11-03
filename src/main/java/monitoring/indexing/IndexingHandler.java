@@ -2,7 +2,6 @@ package monitoring.indexing;
 
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import monitoring.Handler;
 import monitoring.ServerManager;
@@ -20,7 +19,6 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -110,7 +108,7 @@ public class IndexingHandler extends Handler {
                         ObjectMapper mapper = new ObjectMapper();
                         IndexingSyncResponse indexingResponse = mapper.readValue(responseStr, IndexingSyncResponse.class);
                         // for each key in response from indexing service make request to storage
-                        for (IndexingResponseChunk chunk : indexingResponse.getKeys()) {
+                        for (IndexingResponsePart chunk : indexingResponse.getKeys()) {
                             try {
                                 storageResponses.add(makeStorageKeyRequest(chunk));
                             } catch (RuntimeException e) {
@@ -134,7 +132,7 @@ public class IndexingHandler extends Handler {
                 // otherwise we work in streaming mode;
                 // prepare handler for processing indexing service response
                 logger.debug("URL for requesting indexing service: " + baseUrl + pathUrl);
-                IndexingDataRequestHandler handler = new IndexingDataRequestHandler(storageManager);
+                IndexingAsyncResponseHandler handler = new IndexingAsyncResponseHandler(storageManager);
 
                 // make request to indexing service
                 AsyncHttpClient client = new DefaultAsyncHttpClient();
@@ -200,7 +198,7 @@ public class IndexingHandler extends Handler {
     /**
      * @throws RuntimeException if anything goes wrong
      */
-    private String makeStorageKeyRequest(IndexingResponseChunk chunk) {
+    private String makeStorageKeyRequest(IndexingResponsePart chunk) {
         URL storage = storageManager.next();
         String storageUrl = "http://" + storage.getHost() + ":" + storage.getPort() + "/key/" + chunk.getKey();
         try {

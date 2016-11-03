@@ -1,7 +1,7 @@
 package monitoring.indexing;
 
 
-public class IndexingResponseChunk {
+public class IndexingResponsePart {
     private String key;
 
     @Override

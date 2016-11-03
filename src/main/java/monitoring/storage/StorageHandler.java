@@ -25,13 +25,15 @@ public class StorageHandler extends Handler {
             case "/storageData": {
                 String start = request.queryParams("start");
                 String count = request.queryParams("count");
-                boolean allRecords = false;
-                String url = "timestamp/" + start;
-                if (count != null) {
-                    url += "/" + count;
-                } else {
-                    logger.warn("count parameter not specified for /storageData, will try to fetch all records starting from " + start);
+                if (start == null) {
+                    return getError("'start' query parameter not specified", HttpStatus.BAD_REQUEST_400, response, logger);
                 }
+                if (count == null) {
+                    return getError("'count' query parameter not specified", HttpStatus.BAD_REQUEST_400, response, logger);
+                }
+
+                String url = "timestamp/" + start + "/" + count;
+                logger.debug("Parameters for /storageData: count=" + count + ", start=" + start);
 
                 try {
                     return getOk(makeRequest(url), HttpStatus.OK_200, response, logger);
@@ -43,7 +45,7 @@ public class StorageHandler extends Handler {
             case "/storageGetByKey/:key": {
                 String key = request.params(":key");
                 if (key == null) {
-                    return getError("Key parameter not specified", HttpStatus.BAD_REQUEST_400, response, logger);
+                    return getError("'key' parameter not specified", HttpStatus.BAD_REQUEST_400, response, logger);
                 }
 
                 try {
