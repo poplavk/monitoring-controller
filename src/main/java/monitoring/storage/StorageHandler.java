@@ -9,6 +9,8 @@ import org.eclipse.jetty.http.HttpStatus;
 import spark.Request;
 import spark.Response;
 
+import static monitoring.utils.ResponseUtils.*;
+
 public class StorageHandler extends Handler {
     private static final Logger logger = LogManager.getLogger(StorageHandler.class);
     private ServerManager storageManager;
@@ -32,9 +34,22 @@ public class StorageHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest(url);
+                    return getOk(makeRequest(url), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
-                    return ResponseUtils.getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
+                    return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
+                }
+            }
+
+            case "/storageGetByKey/:key": {
+                String key = request.params(":key");
+                if (key == null) {
+                    return getError("Key parameter not specified", HttpStatus.BAD_REQUEST_400, response, logger);
+                }
+
+                try {
+                    return getOk(makeRequest("key/" + key), HttpStatus.OK_200, response, logger);
+                } catch (RuntimeException e) {
+                    getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
             }
 

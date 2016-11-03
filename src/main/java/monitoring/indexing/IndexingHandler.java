@@ -28,6 +28,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static monitoring.utils.ResponseUtils.getError;
+import static monitoring.utils.ResponseUtils.getOk;
 
 public class IndexingHandler extends Handler {
     private static final Logger logger = LogManager.getLogger(IndexingHandler.class);
@@ -48,7 +49,7 @@ public class IndexingHandler extends Handler {
                     return getError("Timestamp not specified", HttpStatus.BAD_REQUEST_400, response, logger);
                 }
                 try {
-                    return makeRequest("/getIndexCount/" + timestamp);
+                    return getOk(makeRequest("/getIndexCount/" + timestamp), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -60,7 +61,7 @@ public class IndexingHandler extends Handler {
                     return getError("Timestamp not specified", HttpStatus.BAD_REQUEST_400, response, logger);
                 }
                 try {
-                    return makeRequest("/getIndexState/" + timestamp);
+                    return getOk(makeRequest("/getIndexState/" + timestamp), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -68,7 +69,7 @@ public class IndexingHandler extends Handler {
 
             case "/indexKPI": {
                 try {
-                    return makeRequest("/getKPI");
+                    return getOk(makeRequest("/getKPI"), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -119,12 +120,12 @@ public class IndexingHandler extends Handler {
 
                         // make response for client
                         String keys = String.join(",", storageResponses);
-                        return "{ " +
+                        return getOk("{ " +
                                 "\"status\": " + "\"" + indexingResponse.getStatus() + "\"" + "," +
                                 "\"count\": " + "\"" + indexingResponse.getCount() + "\"" + "," +
                                 "\"timestamp\": " + "\"" + indexingResponse.getTimestamp() + "\"" + "," +
                                 "\"keys\": " + "[" + keys + "]" +
-                                " }";
+                                " }", HttpStatus.OK_200, response, logger);
                     } catch (RuntimeException | IOException e) {
                         return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                     }
@@ -171,7 +172,7 @@ public class IndexingHandler extends Handler {
                 try {
                     List<StorageResponse> responses = ff.get(config.timeouts.storageTimeout, TimeUnit.MILLISECONDS);
                     ObjectMapper mapper = new ObjectMapper();
-                    return mapper.writeValueAsString(responses);
+                    return getOk(mapper.writeValueAsString(responses), HttpStatus.OK_200, response, logger);
                 } catch (TimeoutException e) {
                     return getError(
                         "Error while waiting for storage service responses: " + e.getMessage(),

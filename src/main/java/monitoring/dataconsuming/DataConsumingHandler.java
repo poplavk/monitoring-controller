@@ -11,6 +11,7 @@ import spark.Response;
 import java.util.concurrent.ExecutionException;
 
 import static monitoring.utils.ResponseUtils.getError;
+import static monitoring.utils.ResponseUtils.getOk;
 
 public class DataConsumingHandler extends Handler {
     private static final Logger logger = LogManager.getLogger(DataConsumingHandler.class);
@@ -29,7 +30,7 @@ public class DataConsumingHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest("status/" + id);
+                    return getOk(makeRequest("status/" + id), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -42,7 +43,7 @@ public class DataConsumingHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest("start/?port=" + port);
+                    return getOk(makeRequest("start/?port=" + port), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -55,7 +56,7 @@ public class DataConsumingHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest("stop/" + id);
+                    return getOk(makeRequest("stop/" + id), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -68,7 +69,7 @@ public class DataConsumingHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest("restart/" + id);
+                    return getOk(makeRequest("restart/" + id), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -76,7 +77,7 @@ public class DataConsumingHandler extends Handler {
 
             case "/dataAllstatus": {
                 try {
-                    return makeRequest("allstatus");
+                    return getOk(makeRequest("allstatus"), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }

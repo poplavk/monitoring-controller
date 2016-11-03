@@ -99,6 +99,7 @@ public class AppInitializer {
         StorageHandler storageHandler = new StorageHandler(storageManager);
 
         get("/storageData", (req, res) -> storageHandler.handle("/storageData", req, res));
+        get("/storageGetByKey/:key", (req, res) -> storageHandler.handle("/storageGetByKey/:key", req, res));
 
         /** =========== END STORAGE METHODS ===================**/
 

@@ -11,6 +11,7 @@ import spark.Response;
 import java.util.concurrent.ExecutionException;
 
 import static monitoring.utils.ResponseUtils.getError;
+import static monitoring.utils.ResponseUtils.getOk;
 
 public class OfflineHandler extends Handler {
     private static final Logger logger = LogManager.getLogger(OfflineHandler.class);
@@ -24,7 +25,7 @@ public class OfflineHandler extends Handler {
         switch (method) {
             case "/offlineStatus": {
                 try {
-                    return makeRequest("status");
+                    return getOk(makeRequest("status"), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -32,7 +33,7 @@ public class OfflineHandler extends Handler {
 
             case "/offlineStart": {
                 try {
-                    return makeRequest("start");
+                    return getOk(makeRequest("start"), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -40,7 +41,7 @@ public class OfflineHandler extends Handler {
 
             case "/offlineStop": {
                 try {
-                    return makeRequest("stop");
+                    return getOk(makeRequest("stop"), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -57,9 +58,9 @@ public class OfflineHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest(
-                        "task/new?task=" + task + "&" + "metric=" + metric + "&" +
-                        "from=" + from + "&" + "to=" + to + "&" + "calcStart=" + calcStart);
+                    return getOk(makeRequest(
+                            "task/new?task=" + task + "&" + "metric=" + metric + "&" +
+                            "from=" + from + "&" + "to=" + to + "&" + "calcStart=" + calcStart), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -74,7 +75,7 @@ public class OfflineHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest("task/" + id + "/discard");
+                    return getOk(makeRequest("task/" + id + "/discard"), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -89,7 +90,7 @@ public class OfflineHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest("task/" + id + "/status");
+                    return getOk(makeRequest("task/" + id + "/status"), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -104,7 +105,7 @@ public class OfflineHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest("task/" + id + "/result");
+                    return getOk(makeRequest("task/" + id + "/result"), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }

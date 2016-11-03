@@ -11,6 +11,7 @@ import spark.Response;
 import java.util.concurrent.ExecutionException;
 
 import static monitoring.utils.ResponseUtils.getError;
+import static monitoring.utils.ResponseUtils.getOk;
 
 public class OnlineHandler extends Handler {
     private static final Logger logger = LogManager.getLogger(OnlineHandler.class);
@@ -24,7 +25,7 @@ public class OnlineHandler extends Handler {
         switch (method) {
             case "/onlineStart": {
                 try {
-                    return makeRequest("start/");
+                    return getOk(makeRequest("start/"), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -37,7 +38,7 @@ public class OnlineHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest("stop/" + id);
+                    return getOk(makeRequest("stop/" + id), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -45,7 +46,7 @@ public class OnlineHandler extends Handler {
 
             case "/onlineStatus": {
                 try {
-                    return makeRequest("status/");
+                    return getOk(makeRequest("status/"), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
@@ -58,7 +59,7 @@ public class OnlineHandler extends Handler {
                 }
 
                 try {
-                    return makeRequest("status/" + id);
+                    return getOk(makeRequest("status/" + id), HttpStatus.OK_200, response, logger);
                 } catch (RuntimeException e) {
                     return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                 }
