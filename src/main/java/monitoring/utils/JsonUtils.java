@@ -4,10 +4,8 @@ package monitoring.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import monitoring.indexing.IndexingResponsePart;
-import monitoring.storage.StorageResponse;
 
 import java.io.IOException;
-import java.util.List;
 
 public class JsonUtils {
     private static ObjectMapper mapper = new ObjectMapper();
@@ -15,21 +13,12 @@ public class JsonUtils {
     private JsonUtils() { }
 
     /**
-     * @param response
-     * @return
-     * @throws RuntimeException if serialization failed
+     * Serialize anything
+     * @throws RuntimeException if serialization fails
      */
-    public static String serialize(StorageResponse response) {
+    public static <T> String serialize(T object) {
         try {
-            return mapper.writeValueAsString(response);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static String serialize(List<StorageResponse> responses) {
-        try {
-            return mapper.writeValueAsString(responses);
+            return mapper.writeValueAsString(object);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }

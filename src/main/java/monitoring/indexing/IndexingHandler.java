@@ -4,6 +4,7 @@ package monitoring.indexing;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import monitoring.Handler;
+import monitoring.MetricsInfoTable;
 import monitoring.ServerManager;
 import monitoring.config.Configuration;
 import monitoring.storage.StorageResponse;
@@ -19,6 +20,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -32,9 +34,11 @@ public class IndexingHandler extends Handler {
     private static final Logger logger = LogManager.getLogger(IndexingHandler.class);
 
     private ServerManager storageManager;
+    private MetricsInfoTable table;
 
-    public IndexingHandler(Configuration config, ServerManager indexingManager, ServerManager storageManager) {
+    public IndexingHandler(Configuration config, MetricsInfoTable table, ServerManager indexingManager, ServerManager storageManager) {
         this.config = config;
+        this.table = table;
         this.manager = indexingManager;
         this.storageManager = storageManager;
     }
@@ -73,8 +77,21 @@ public class IndexingHandler extends Handler {
                 }
             }
 
-            case "/indexData/:timestamp": {
-                // we dont use makeRequest here, because this logic is much more complex than request-response
+            case "/getMetrics": {
+                String host = request.queryParams("host");
+                String port = request.queryParams("port");
+                String type = request.queryParams("type");
+                String timestamp = request.queryParams("timestamp");
+                if (host == null || port == null || type == null || timestamp == null) {
+                    return getError("Some of mandatory params (host, port, type, timestamp) are missing",
+                            HttpStatus.BAD_REQUEST_400, response, logger);
+                }
+                if (!config.supportedMetricTypes.contains(type.toLowerCase())) {
+                    return getError("Unsupported metric type: " + type + ", supported types are: " + String.join(",", config.supportedMetricTypes),
+                            HttpStatus.BAD_REQUEST_400, response, logger);
+                }
+
+                // determine if we use streaming mode
                 String streamParam = request.queryParams("stream");
                 boolean isStream = false;
                 if (streamParam == null || !"true".equalsIgnoreCase(streamParam)) {
@@ -84,23 +101,25 @@ public class IndexingHandler extends Handler {
                     logger.debug("Will use streaming while requesting indexing service");
                 }
 
-                String timestamp = request.params(":timestamp");
-                if (timestamp == null) {
-                    return getError("Timestamp not specified", HttpStatus.BAD_REQUEST_400, response, logger);
+                // find ID for metric info record
+                Optional<Long> id = table.getMetricInfoId(host, port, type);
+                if (!id.isPresent()) {
+                    return getError("No information about monitored metric for specified params: host=" + host + ", port=" + port + ", type=" + type,
+                            HttpStatus.BAD_REQUEST_400, response, logger);
                 }
 
-                // choose indexing service that we will communicate with
+                // choose indexing service that we will communicate with and make URL
                 String baseUrl = next();
-                String pathUrl = "getIndexData/" + timestamp;
+                String pathUrl = "getIndexData/" + timestamp + "/" + id.get();
                 if (baseUrl == null) {
                     return getError("No indexing servers are specified",
-                                    HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
+                            HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
                     );
                 }
 
                 // if we dont use streaming, try to receive all data at once
                 if (!isStream) {
-                    logger.debug("Trying to make /indexData/:timestamp request without streaming");
+                    logger.debug("Trying to make getIndexData/" + timestamp + "/" + id.get() + " request without streaming");
                     try {
                         // make request to indexing service
                         String responseStr = makeRequest(baseUrl + pathUrl);
@@ -137,7 +156,7 @@ public class IndexingHandler extends Handler {
                 // make request to indexing service
                 AsyncHttpClient client = new DefaultAsyncHttpClient();
                 ListenableFuture<List<CompletableFuture<StorageResponse>>> indexingRequest =
-                    client.prepareGet(baseUrl + pathUrl).addHeader("stream", "true").execute(handler);
+                        client.prepareGet(baseUrl + pathUrl).addHeader("stream", "true").execute(handler);
                 List<CompletableFuture<StorageResponse>> storageResponses;
 
                 // try to wait for indexing service response that we received
@@ -145,23 +164,23 @@ public class IndexingHandler extends Handler {
                 try {
                     storageResponses = indexingRequest.get(config.timeouts.indexingTimeout, TimeUnit.MILLISECONDS);
                     logger.debug(
-                        "Received " + storageResponses.size() + " messages from indexing, sent all to storage"
+                            "Received " + storageResponses.size() + " messages from indexing, sent all to storage"
                     );
                 } catch (TimeoutException e) {
                     return getError(
-                        "Timeout while requesting indexing sevice: " + e.getMessage(),
-                        HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
+                            "Timeout while requesting indexing sevice: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
                     );
                 } catch (InterruptedException | ExecutionException e) {
                     return getError(
-                        "Unexpected error while requesting indexing service: " + e.getMessage(),
-                        HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
+                            "Unexpected error while requesting indexing service: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
                     );
                 }
 
                 // some magic with futures to transform List<Future> to Future<List>
                 CompletableFuture<Void> listFuture = CompletableFuture.allOf(
-                    storageResponses.toArray(new CompletableFuture[storageResponses.size()])
+                        storageResponses.toArray(new CompletableFuture[storageResponses.size()])
                 );
                 CompletableFuture<List<StorageResponse>> ff = listFuture.thenApply(v ->
                         storageResponses.stream().map(CompletableFuture::join).collect(Collectors.toList())
@@ -173,18 +192,18 @@ public class IndexingHandler extends Handler {
                     return getOk(mapper.writeValueAsString(responses), HttpStatus.OK_200, response, logger);
                 } catch (TimeoutException e) {
                     return getError(
-                        "Error while waiting for storage service responses: " + e.getMessage(),
-                        HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
+                            "Error while waiting for storage service responses: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
                     );
                 } catch (ExecutionException | InterruptedException e) {
                     return getError(
-                        "Unexpected error while waiting for storage service responses: " + e.getMessage(),
-                        HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
+                            "Unexpected error while waiting for storage service responses: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
                     );
                 } catch (JsonProcessingException e) {
                     return getError(
-                        "Serialization exception: " + e.getMessage(),
-                        HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
+                            "Serialization exception: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
                     );
                 }
             }

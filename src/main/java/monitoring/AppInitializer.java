@@ -16,12 +16,10 @@ import spark.Spark;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URL;
-import java.net.UnknownHostException;
 
 import static monitoring.utils.ResponseUtils.getError;
 import static monitoring.utils.ResponseUtils.getOk;
-import static spark.Spark.get;
-import static spark.Spark.port;
+import static spark.Spark.*;
 
 public class AppInitializer {
     private static final Logger logger = LogManager.getLogger(AppInitializer.class);
@@ -30,6 +28,8 @@ public class AppInitializer {
     final String portField = "port";
 
     private Configuration config;
+
+    private MetricsInfoTable table = new MetricsInfoTable();
     private ServerManager dataConsumingManager = new ServerManager("data consuming");
     private ServerManager onlineManager = new ServerManager("online analytics");
     private ServerManager offlineManager = new ServerManager("offline analytics");
@@ -49,10 +49,20 @@ public class AppInitializer {
     }
 
     private void createRoutes() {
-        /** =========== INDEXING METHODS ===================**/
-        IndexingHandler handler = new IndexingHandler(config, indexingManager, storageManager);
+        /** =========== METRICS INFO METHODS ===================**/
+        MetricsInfoHandler infoHandler = new MetricsInfoHandler(table, config);
 
-        get("/indexData/:timestamp", (req, res) -> handler.handle("/indexData/:timestamp", req, res));
+        get("/getMetricsTable", (req, res) -> infoHandler.handle("/getMetricsTable", req, res));
+        post("/startMonitoring", (req, res) -> infoHandler.handle("/startMonitoring", req, res));
+        delete("/stopMonitoring", (req, res) -> infoHandler.handle("/stopMonitoring", req, res));
+
+        /** =========== END METRICS INFO METHODS ===================**/
+
+
+        /** =========== INDEXING METHODS ===================**/
+        IndexingHandler handler = new IndexingHandler(config, table, indexingManager, storageManager);
+
+        get("/getMetrics", (req, res) -> handler.handle("/getMetrics", req, res));
         get("/indexCount/:timestamp", (req, res) -> handler.handle("/indexCount/:timestamp", req, res));
         get("/indexState/:timestamp", (req, res) -> handler.handle("/indexState/:timestamp", req, res));
         get("/indexKPI", (req, res) -> handler.handle("/indexKPI", req, res));
