@@ -114,11 +114,11 @@ public class AppInitializer {
         /** =========== END STORAGE METHODS ===================**/
 
         /** =========== ADD METHODS ===================**/
-        get("/addIndexing", (req, res) -> addNode(indexingManager, req, res));
-        get("/addStorage", (req, res) -> addNode(storageManager, req, res));
-        get("/addOffline", (req, res) -> addNode(offlineManager, req, res));
-        get("/addOnline", (req, res) -> addNode(onlineManager, req, res));
-        get("/addDataConsumer", (req, res) -> addNode(dataConsumingManager, req, res));
+        post("/addIndexing", (req, res) -> addNode(indexingManager, req, res));
+        post("/addStorage", (req, res) -> addNode(storageManager, req, res));
+        post("/addOffline", (req, res) -> addNode(offlineManager, req, res));
+        post("/addOnline", (req, res) -> addNode(onlineManager, req, res));
+        post("/addDataConsumer", (req, res) -> addNode(dataConsumingManager, req, res));
         /** =========== END ADD METHODS ===================**/
     }
 
