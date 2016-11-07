@@ -4,10 +4,10 @@ Configuration file is at config/application.conf
 bin/monitoring-controller.sh 
 
 2. Add storage service address (so we know can call it)  
-GET 127.0.0.1:1499/addStorage?host=host&port=port  
+POST 127.0.0.1:1499/addStorage?host=host&port=port  
 
 3. Add indexing service address (so we can call it)  
-GET 127.0.0.1:1499/addStorage?host=host&port=port  
+POST 127.0.0.1:1499/addIndexing?host=host&port=port  
 
 4. Add record to internal table (start monitoring of metric at node)  
 POST 127.0.0.1:1499/startMonitoring?host=host&port=port&type=type  
