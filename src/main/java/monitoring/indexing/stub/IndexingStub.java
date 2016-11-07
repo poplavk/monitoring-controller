@@ -4,75 +4,65 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import monitoring.indexing.IndexingResponsePart;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.jetty.http.HttpStatus;
 
-import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.io.PrintWriter;
 
 import static spark.Spark.*;
 
 public class IndexingStub {
     private static final Logger logger = LogManager.getLogger(IndexingStub.class);
 
-    // TODO: 30.10.2016 needs fixing with new API formats
     public static void main(String[] args) {
-        final String fromField = "starttime";
-        final String toField = "endtime";
-        final String countField = "count";
         final int port = 8081;
 
-        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
 
         port(port);
-        get("/getdata", (req, res) -> {
-            String fromParam = req.queryParams(fromField);
-            String toParam = req.queryParams(toField);
-            String countParam = req.queryParams(countField);
+        get("/getIndexData/:id/:timestamp", (req, res) -> {
+            String id = req.params(":id");
+            String timestamp = req.params(":timestamp");
 
-            if (toParam != null) {
-                logger.debug("Received request with non-null " + toField + " request field");
-                IndexingResponsePart response = new IndexingResponsePart();
-                response.setKey("testKey");
+            if (id == null || timestamp == null) {
+                res.status(HttpStatus.BAD_REQUEST_400);
+                return "Wrong request parameters";
+            }
 
-                res.status(200);
-                String responseString = objectMapper.writeValueAsString(response);
-
-                logger.info("Returning to response " + responseString);
-                return responseString;
-            } else if (countParam != null) {
-                logger.debug("Received request with non-null " + countField + " request field");
-
-                IndexingResponsePart response1 = new IndexingResponsePart();
-                response1.setKey("testKey1");
-
-                IndexingResponsePart response2 = new IndexingResponsePart();
-                response2.setKey("testKey2");
-
-                IndexingResponsePart response3 = new IndexingResponsePart();
-                response3.setKey("testKey3");
-
-                res.status(200);
-                String responseString1 = objectMapper.writeValueAsString(response1);
-                String responseString2 = objectMapper.writeValueAsString(response2);
-                String responseString3 = objectMapper.writeValueAsString(response3);
-
-                OutputStream out = res.raw().getOutputStream();
-                out.write(responseString1.getBytes(Charset.forName("UTF-8")));
-                out.write("@".getBytes(Charset.forName("UTF-8")));
-                out.flush();
-
-                out.write(responseString2.getBytes(Charset.forName("UTF-8")));
-                out.write("@".getBytes(Charset.forName("UTF-8")));
-                out.flush();
-
-                out.write(responseString3.getBytes(Charset.forName("UTF-8")));
-                out.flush();
-                halt();
-
-                logger.info("Returning count response " + responseString1);
-                return responseString1;
+            boolean isStream = false;
+            String streamHeader = req.headers("stream");
+            if (streamHeader == null) {
+                logger.warn("stream header is null");
+            } else if (streamHeader.equalsIgnoreCase("true")) {
+                logger.debug("Stream header = true");
+                isStream = true;
             } else {
-                res.status(404);
-                return "Not found!";
+                logger.error("Stream header not equals true: " + streamHeader);
+            }
+
+            if (isStream) {
+                IndexingResponsePart part1 = new IndexingResponsePart("key1");
+                IndexingResponsePart part2 = new IndexingResponsePart("key2");
+                IndexingResponsePart part3 = new IndexingResponsePart("key3");
+
+                PrintWriter writer = res.raw().getWriter();
+                writer.write(mapper.writeValueAsString(part1));
+                writer.write("@");
+                writer.flush();
+
+                writer.write(mapper.writeValueAsString(part2));
+                writer.write("@");
+                writer.flush();
+
+                writer.write(mapper.writeValueAsString(part3));
+                writer.write("@");
+                writer.flush();
+
+                halt();
+                return null;
+            } else {
+                res.status(HttpStatus.OK_200);
+                return "{\"status\": \"ok\", \"timestamp\": \"12345\"," +
+                        "\"count\": \"3\", \"keys\": [{\"key\":\"key1\"}, {\"key\":\"key2\"}, {\"key\":\"key3\"}]}";
             }
         });
 

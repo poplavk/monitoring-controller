@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import monitoring.storage.StorageResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.jetty.http.HttpStatus;
 
 import static spark.Spark.get;
 import static spark.Spark.port;
@@ -12,64 +13,25 @@ import static spark.Spark.port;
 public class StorageStub {
     private static final Logger logger = LogManager.getLogger(StorageStub.class);
 
-    // TODO: 30.10.2016 need fixing with new API formats
     public static void main(String[] args) {
-        final String fromField = "starttime";
-        final String toField = "endtime";
-        final String countField = "count";
         final int port = 8082;
 
-        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
 
         port(port);
-        get("/getdata", (req, res) -> {
-            String fromParam = req.queryParams(fromField);
-            String toParam = req.queryParams(toField);
-            String countParam = req.queryParams(countField);
-
-            if (toParam != null) {
-                logger.debug("Received request with non-null " + toField + " request field");
-                StorageResponse response = new StorageResponse();
-                response.setKey("testKey");
-                response.setTs("testTs");
-                response.setValue("testValue");
-
-                res.status(200);
-                String responseString = objectMapper.writeValueAsString(response);
-
-                logger.info("Returning to response " + responseString);
-                return responseString;
-            } else if (countParam != null) {
-                logger.debug("Received request with non-null " + countField + " request field");
-                StorageResponse response = new StorageResponse();
-                response.setKey("testKey");
-                response.setTs("testTs");
-                response.setValue("testValue");
-
-                res.status(200);
-                String responseString = objectMapper.writeValueAsString(response);
-
-                logger.info("Returning count response " + responseString);
-                return responseString;
-            } else {
-                res.status(404);
-                return "Not found!";
+        get("/key/:key", (req, res) -> {
+            String key = req.params(":key");
+            if (key == null) {
+                logger.error("key param is null");
+                res.status(HttpStatus.BAD_REQUEST_400);
+                return "key param is null";
             }
-        });
 
-        get("/test", (req, res) -> {
-            logger.info("Received request for /test with body: " + req.body());
-            StorageResponse response = new StorageResponse();
-            response.setKey("testKey");
-            response.setTs("testTs");
-            response.setValue("testValue");
+            logger.info("received /key/" + key);
 
-            res.status(200);
-            String responseString = objectMapper.writeValueAsString(response);
-
-            logger.info("Returning count response " + responseString);
-
-            return responseString;
+            return mapper.writeValueAsString(
+                    new StorageResponse(key, String.valueOf(System.currentTimeMillis()), key + "_value")
+            );
         });
 
         logger.info("Started to listen on localhost:" + port);

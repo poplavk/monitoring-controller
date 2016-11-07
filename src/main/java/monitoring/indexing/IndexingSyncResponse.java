@@ -8,6 +8,16 @@ public class IndexingSyncResponse {
     private String count;
     private List<IndexingResponsePart> keys;
 
+    public IndexingSyncResponse(String status, String timestamp, String count, List<IndexingResponsePart> keys) {
+        this.status = status;
+        this.timestamp = timestamp;
+        this.count = count;
+        this.keys = keys;
+    }
+
+    // needed for fasterxml
+    public IndexingSyncResponse() {}
+
     public String getStatus() {
         return status;
     }

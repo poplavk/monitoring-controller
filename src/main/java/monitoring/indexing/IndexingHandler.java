@@ -1,7 +1,5 @@
 package monitoring.indexing;
 
-
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import monitoring.Handler;
 import monitoring.MetricsInfoTable;
@@ -32,6 +30,7 @@ import static monitoring.utils.ResponseUtils.getOk;
 
 public class IndexingHandler extends Handler {
     private static final Logger logger = LogManager.getLogger(IndexingHandler.class);
+    private ObjectMapper mapper = new ObjectMapper();
 
     private ServerManager storageManager;
     private MetricsInfoTable table;
@@ -82,9 +81,12 @@ public class IndexingHandler extends Handler {
                 String port = request.queryParams("port");
                 String type = request.queryParams("type");
                 String timestamp = request.queryParams("timestamp");
-                if (host == null || port == null || type == null || timestamp == null) {
-                    return getError("Some of mandatory params (host, port, type, timestamp) are missing",
+                if (host == null || port == null || type == null) {
+                    return getError("Some of mandatory params (host, port, type) are missing for " + method,
                             HttpStatus.BAD_REQUEST_400, response, logger);
+                }
+                if (timestamp == null) {
+                    logger.warn("'timestamp' parameter is not present for " + method);
                 }
                 if (!config.supportedMetricTypes.contains(type.toLowerCase())) {
                     return getError("Unsupported metric type: " + type + ", supported types are: " + String.join(",", config.supportedMetricTypes),
@@ -95,54 +97,57 @@ public class IndexingHandler extends Handler {
                 String streamParam = request.queryParams("stream");
                 boolean isStream = false;
                 if (streamParam == null || !"true".equalsIgnoreCase(streamParam)) {
-                    logger.warn("Query parameter 'stream' is not specified at /indexData/:timestamp, will try to get whole response from indexing at once");
+                    logger.warn("Query parameter 'stream' is not specified at " + method + ", will try to get whole response from indexing at once");
                 } else {
                     isStream = true;
-                    logger.debug("Will use streaming while requesting indexing service");
+                    logger.debug("Will use streaming while requesting indexing service at " + method);
                 }
 
                 // find ID for metric info record
                 Optional<Long> id = table.getMetricInfoId(host, port, type);
                 if (!id.isPresent()) {
-                    return getError("No information about monitored metric for specified params: host=" + host + ", port=" + port + ", type=" + type,
+                    return getError("No information about monitored metric for specified params: host=" + host + ", port=" + port + ", type=" + type + " for " + method,
                             HttpStatus.BAD_REQUEST_400, response, logger);
                 }
 
                 // choose indexing service that we will communicate with and make URL
                 String baseUrl = next();
-                String pathUrl = "getIndexData/" + timestamp + "/" + id.get();
+                String pathUrl = "getIndexData/" + id.get() + (timestamp == null ? "" : "/" + timestamp);
                 if (baseUrl == null) {
-                    return getError("No indexing servers are specified",
+                    return getError("No indexing servers are specified for " + method,
                             HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
                     );
                 }
 
                 // if we dont use streaming, try to receive all data at once
                 if (!isStream) {
-                    logger.debug("Trying to make getIndexData/" + timestamp + "/" + id.get() + " request without streaming");
+                    logger.debug("Trying to make " + baseUrl + pathUrl + " request without streaming");
                     try {
                         // make request to indexing service
-                        String responseStr = makeRequest(baseUrl + pathUrl);
-                        List<String> storageResponses = new ArrayList<>();
-                        ObjectMapper mapper = new ObjectMapper();
+                        String responseStr = makeRequest(pathUrl);
+                        List<StorageResponse> storageResponses = new ArrayList<>();
                         IndexingSyncResponse indexingResponse = mapper.readValue(responseStr, IndexingSyncResponse.class);
                         // for each key in response from indexing service make request to storage
                         for (IndexingResponsePart chunk : indexingResponse.getKeys()) {
+                            logger.debug("Chunk of indexing response: " + chunk.toString());
                             try {
-                                storageResponses.add(makeStorageKeyRequest(chunk));
-                            } catch (RuntimeException e) {
+                                StorageResponse storageResponse = mapper.readValue(makeStorageKeyRequest(chunk), StorageResponse.class);
+                                logger.debug("Storage response: " + storageResponse.toString());
+                                storageResponses.add(storageResponse);
+                            } catch (RuntimeException | IOException e) {
                                 return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                             }
                         }
 
                         // make response for client
-                        String keys = String.join(",", storageResponses);
-                        return getOk("{ " +
-                                "\"status\": " + "\"" + indexingResponse.getStatus() + "\"" + "," +
-                                "\"count\": " + "\"" + indexingResponse.getCount() + "\"" + "," +
-                                "\"timestamp\": " + "\"" + indexingResponse.getTimestamp() + "\"" + "," +
-                                "\"keys\": " + "[" + keys + "]" +
-                                " }", HttpStatus.OK_200, response, logger);
+                        List<String> lst = storageResponses.stream().map(resp ->
+                            "{" +
+                            "\"key\": \"" + resp.getKey() + "\", " +
+                            "\"timestamp\": \"" + resp.getTs() + "\", " +
+                            "\"value\": \"" + resp.getValue() + "\"" +
+                            "}"
+                        ).collect(Collectors.toList());
+                        return getOk("{\"metrics\": [ " + String.join(", ", lst) + " ] }", HttpStatus.OK_200, response, logger);
                     } catch (RuntimeException | IOException e) {
                         return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                     }
@@ -168,7 +173,7 @@ public class IndexingHandler extends Handler {
                     );
                 } catch (TimeoutException e) {
                     return getError(
-                            "Timeout while requesting indexing sevice: " + e.getMessage(),
+                            "Timeout while requesting indexing service: " + e.getMessage(),
                             HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
                     );
                 } catch (InterruptedException | ExecutionException e) {
@@ -188,8 +193,15 @@ public class IndexingHandler extends Handler {
 
                 try {
                     List<StorageResponse> responses = ff.get(config.timeouts.storageTimeout, TimeUnit.MILLISECONDS);
-                    ObjectMapper mapper = new ObjectMapper();
-                    return getOk(mapper.writeValueAsString(responses), HttpStatus.OK_200, response, logger);
+                    // make response for client
+                    List<String> lst = responses.stream().map(resp ->
+                            "{" +
+                            "\"key\": \"" + resp.getKey() + "\", " +
+                            "\"timestamp\": \"" + resp.getTs() + "\", " +
+                            "\"value\": \"" + resp.getValue() + "\"" +
+                            "}"
+                    ).collect(Collectors.toList());
+                    return getOk("{\"metrics\": [ " + String.join(", ", lst) + " ] }", HttpStatus.OK_200, response, logger);
                 } catch (TimeoutException e) {
                     return getError(
                             "Error while waiting for storage service responses: " + e.getMessage(),
@@ -198,11 +210,6 @@ public class IndexingHandler extends Handler {
                 } catch (ExecutionException | InterruptedException e) {
                     return getError(
                             "Unexpected error while waiting for storage service responses: " + e.getMessage(),
-                            HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
-                    );
-                } catch (JsonProcessingException e) {
-                    return getError(
-                            "Serialization exception: " + e.getMessage(),
                             HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
                     );
                 }
