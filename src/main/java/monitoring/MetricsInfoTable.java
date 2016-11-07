@@ -5,7 +5,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -26,8 +25,8 @@ public class MetricsInfoTable {
         return table.remove(host + "|" + port + "|" + metricType);
     }
 
-    public Optional<Long> getMetricInfoId(String host, String port, String metricType) {
-        return Optional.ofNullable(table.get(host + "|" + port + "|" + metricType));
+    public Long getMetricInfoId(String host, String port, String metricType) {
+        return table.get(host + "|" + port + "|" + metricType);
     }
 
     public Map<String, Long> getAllMetricsInfo() {

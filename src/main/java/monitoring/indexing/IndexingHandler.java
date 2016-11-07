@@ -8,7 +8,10 @@ import monitoring.config.Configuration;
 import monitoring.storage.StorageResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.asynchttpclient.*;
+import org.asynchttpclient.AsyncCompletionHandler;
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.ListenableFuture;
 import org.eclipse.jetty.http.HttpStatus;
 import spark.Request;
 import spark.Response;
@@ -18,7 +21,6 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -104,15 +106,15 @@ public class IndexingHandler extends Handler {
                 }
 
                 // find ID for metric info record
-                Optional<Long> id = table.getMetricInfoId(host, port, type);
-                if (!id.isPresent()) {
+                Long id = table.getMetricInfoId(host, port, type);
+                if (id == null) {
                     return getError("No information about monitored metric for specified params: host=" + host + ", port=" + port + ", type=" + type + " for " + method,
                             HttpStatus.BAD_REQUEST_400, response, logger);
                 }
 
                 // choose indexing service that we will communicate with and make URL
                 String baseUrl = next();
-                String pathUrl = "getIndexData/" + id.get() + (timestamp == null ? "" : "/" + timestamp);
+                String pathUrl = "getIndexData/" + id + (timestamp == null ? "" : "/" + timestamp);
                 if (baseUrl == null) {
                     return getError("No indexing servers are specified for " + method,
                             HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger
