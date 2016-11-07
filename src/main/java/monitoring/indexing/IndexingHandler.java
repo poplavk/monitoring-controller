@@ -133,9 +133,14 @@ public class IndexingHandler extends Handler {
                         for (IndexingResponsePart chunk : indexingResponse.getKeys()) {
                             logger.debug("Chunk of indexing response: " + chunk.toString());
                             try {
-                                StorageResponse storageResponse = mapper.readValue(makeStorageKeyRequest(chunk), StorageResponse.class);
-                                logger.debug("Storage response: " + storageResponse.toString());
-                                storageResponses.add(storageResponse);
+                                String storageStr = makeStorageKeyRequest(chunk);
+                                if (storageStr.isEmpty()) {
+                                    logger.warn("No value found for key " + chunk.getKey());
+                                } else {
+                                    StorageResponse storageResponse = mapper.readValue(storageStr, StorageResponse.class);
+                                    logger.debug("Storage response: " + storageResponse.toString());
+                                    storageResponses.add(storageResponse);
+                                }
                             } catch (RuntimeException | IOException e) {
                                 return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
                             }
@@ -233,6 +238,7 @@ public class IndexingHandler extends Handler {
             return new DefaultAsyncHttpClient().prepareGet(storageUrl).execute(new AsyncCompletionHandler<String>() {
                 @Override
                 public String onCompleted(org.asynchttpclient.Response response) throws Exception {
+                    logger.trace("Received response from storage: status=" + response.getStatusCode());
                     return response.getResponseBody(Charset.forName("UTF-8"));
                 }
             }).get(config.timeouts.storageTimeout, TimeUnit.MILLISECONDS);

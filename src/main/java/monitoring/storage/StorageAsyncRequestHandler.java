@@ -21,22 +21,27 @@ public class StorageAsyncRequestHandler extends AsyncCompletionHandler<Void> {
 
     @Override
     public Void onCompleted(Response response) throws Exception {
-        if (response.getStatusCode() != HttpStatus.OK_200) {
+        if (response.getStatusCode() == HttpStatus.NO_CONTENT_204) {
+            logger.error("Value not found: " + response.getUri().toString());
             fut.completeExceptionally(new Exception(
-                "Invalid status code " + response.getStatusCode() +
-                " from server " + response.getRemoteAddress() +
-                ", response body: " + response.getResponseBody())
+                    "Value not found for URI " + response.getUri().toString()
+            ));
+        } else if (response.getStatusCode() != HttpStatus.OK_200) {
+            logger.error("Error receiving from storage: " + response.toString());
+            fut.completeExceptionally(new Exception(
+                    "Invalid status code " + response.getStatusCode() +
+                    " from server " + response.getRemoteAddress() +
+                    ", response body: " + response.getResponseBody())
             );
-            return null;
+        } else {
+            String rawBody = response.getResponseBody();
+            StorageResponse res = mapper.readValue(rawBody, StorageResponse.class);
+
+            logger.info("Received response from storage " + response.getRemoteAddress() + ":"
+                    + rawBody + " with status " + response.getStatusCode()
+            );
+            fut.complete(res);
         }
-
-        String rawBody = response.getResponseBody();
-        StorageResponse res = mapper.readValue(rawBody, StorageResponse.class);
-
-        logger.info("Received response from storage " + response.getRemoteAddress() + ":"
-            + rawBody + " with status " + response.getStatusCode()
-        );
-        fut.complete(res);
 
         return null;
     }
