@@ -11,4 +11,4 @@ RUN apt-get update && \
 
 RUN apt-get install -y git
 
-COPY monitoring-controller /opt/monitoring-controller
+COPY build/distributions/monitoring-controller /opt/monitoring-controller
