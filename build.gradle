@@ -12,6 +12,7 @@ apply plugin: 'distribution'
 
 distributions {
     main {
+    baseName = 'monitoring-controller'
         contents {
             into("config") {
                 from ("config")
@@ -23,7 +24,7 @@ distributions {
 mainClassName = "monitoring.Application"
 
 jar {
-    baseName = 'monitoring-module'
+    baseName = 'monitoring-controller'
     version =  '0.1.0'
 }
 
