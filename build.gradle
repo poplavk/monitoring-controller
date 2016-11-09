@@ -46,3 +46,12 @@ dependencies {
 
     testCompile 'junit:junit:4.12'
 }
+
+startScripts {
+    doLast {
+        unixScript.text = unixScript.text.replace(
+                'exec "$JAVACMD" "${JVM_OPTS[@]}" -classpath "$CLASSPATH" monitoring.Application "$@"',
+                'nohup exec "$JAVACMD" "${JVM_OPTS[@]}" -classpath "$CLASSPATH" monitoring.Application "$@" &> /dev/null &'
+        )
+    }
+}
