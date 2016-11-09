@@ -148,11 +148,7 @@ public class IndexingHandler extends Handler {
 
                         // make response for client
                         List<String> lst = storageResponses.stream().map(resp ->
-                            "{" +
-                            "\"key\": \"" + resp.getKey() + "\", " +
-                            "\"timestamp\": \"" + resp.getTs() + "\", " +
-                            "\"value\": \"" + resp.getValue() + "\"" +
-                            "}"
+                            getJsonString(resp)
                         ).collect(Collectors.toList());
                         return getOk("{\"metrics\": [ " + String.join(", ", lst) + " ] }", HttpStatus.OK_200, response, logger);
                     } catch (RuntimeException | IOException e) {
@@ -200,14 +196,9 @@ public class IndexingHandler extends Handler {
 
                 try {
                     List<StorageResponse> responses = ff.get(config.timeouts.storageTimeout, TimeUnit.MILLISECONDS);
+
                     // make response for client
-                    List<String> lst = responses.stream().map(resp ->
-                            "{" +
-                            "\"key\": \"" + resp.getKey() + "\", " +
-                            "\"timestamp\": \"" + resp.getTs() + "\", " +
-                            "\"value\": \"" + resp.getValue() + "\"" +
-                            "}"
-                    ).collect(Collectors.toList());
+                    List<String> lst = agregateResponses(responses);
                     return getOk("{\"metrics\": [ " + String.join(", ", lst) + " ] }", HttpStatus.OK_200, response, logger);
                 } catch (TimeoutException e) {
                     return getError(
@@ -226,6 +217,27 @@ public class IndexingHandler extends Handler {
                 return "Unknown method";
             }
         }
+    }
+
+    public List<String> agregateResponses(List<StorageResponse> responses) {
+        float step = (float) responses.size() / (float) config.maxResultAmount;
+        if (step <= 1) {
+            return responses.stream().map(this::getJsonString).collect(Collectors.toList());
+        }
+        List<String> agregateResponses = new ArrayList<>();
+        for (float i = 0; i < responses.size(); i += step) {
+            StorageResponse resp = responses.get((int) i);
+            agregateResponses.add(getJsonString(resp));
+        }
+        return agregateResponses;
+    }
+
+    private String getJsonString(StorageResponse resp) {
+        return "{" +
+            "\"key\": \"" + resp.getKey() + "\", " +
+            "\"timestamp\": \"" + resp.getTs() + "\", " +
+            "\"value\": \"" + resp.getValue() + "\"" +
+        "}";
     }
 
     /**
