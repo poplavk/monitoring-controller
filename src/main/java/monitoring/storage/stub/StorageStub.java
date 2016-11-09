@@ -29,8 +29,11 @@ public class StorageStub {
 
             logger.info("received /key/" + key);
 
+            // "{\"metric_id\": <id>, \"metric\":{\"value\": <float от 1.0 до 100.0 >}}"
             return mapper.writeValueAsString(
-                    new StorageResponse(key, String.valueOf(System.currentTimeMillis()), key + "_value")
+                    new StorageResponse(key, String.valueOf(System.currentTimeMillis()),
+                        "{ \"metric_id\": " + String.valueOf(System.currentTimeMillis()) + ", " +
+                        "\"metric\": {\"value\": " + 66.6 + "}}")
             );
         });
 

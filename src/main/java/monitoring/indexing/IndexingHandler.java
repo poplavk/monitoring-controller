@@ -147,9 +147,7 @@ public class IndexingHandler extends Handler {
                         }
 
                         // make response for client
-                        List<String> lst = storageResponses.stream().map(resp ->
-                            getJsonString(resp)
-                        ).collect(Collectors.toList());
+                        List<String> lst = agregateResponses(storageResponses);
                         return getOk("{\"metrics\": [ " + String.join(", ", lst) + " ] }", HttpStatus.OK_200, response, logger);
                     } catch (RuntimeException | IOException e) {
                         return getError("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR_500, response, logger);
