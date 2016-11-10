@@ -1,10 +1,20 @@
-For Docker, dont forget to log in: docker login
+# Table of contents  
+[Useful information](#useful)  
+[Building image from scratch](#building)  
+[Pulling image and running app](#pulling)  
+[Example of using app](#usage)  
+
+<a name="useful"/>  
+## Useful information  
+For Docker, dont forget to log in: docker login  
 Useful commands:  
 To see all containers: docker ps -a  
 To see all images: docker images  
 To remove container: docker rm \<id/name\>  
 To remove image: docker rmi \<id/name\>  
 
+<a name="building"/>
+## Building image from scratch  
 Building docker image from scratch and push it to Docker Hub:
 
 1. Build application  
@@ -20,7 +30,8 @@ docker run -t -i z1kkurat/monitoring-controller /bin/bash
 4. Push to Docker Hub  
 docker push z1kkurat/monitoring-controller  
 
-Pulling Docker image from Docker Hub and running it:  
+<a name="pulling"/>  
+## Pulling Docker image from Docker Hub and running it:  
 We ALWAYS rely on latest tag, so if we do any versioning, that will be for some internal use  
 
 1. Pull  
@@ -30,6 +41,8 @@ docker pull z1kkurat/monitoring-controller
 docker run -t -p \<port\>:\<port\> -i z1kkurat/monitoring-controller /bin/bash  
 where \<port\> is the port u are going to use to access the application (u will need to set chosen port in application configuration file config/application.conf after container starts and before you start the app itself)
 
+<a name="usage"/>
+## Usage example:  
 Configuration file is at config/application.conf  
 
 Example:  
