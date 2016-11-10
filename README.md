@@ -27,27 +27,32 @@ We ALWAYS rely on latest tag, so if we do any versioning, that will be for some 
 docker pull z1kkurat/monitoring-controller
 
 2. Run  
-docker run -t -i z1kkurat/monitoring-controller /bin/bash
-
+docker run -t -p \<port\>:\<port\> -i z1kkurat/monitoring-controller /bin/bash  
+where \<port\> is the port u are going to use to access the application (u will need to set chosen port in application configuration file config/application.conf after container starts and before you start the app itself)
 
 Configuration file is at config/application.conf  
 
-1. Start monitoring-controller  
-bin/monitoring-controller.sh 
+Example:  
 
-2. Add storage service address (so we can call it)  
+1. Fix the config file at config/application.conf  
+Set the port, timeouts, allowed metric types and so on  
+
+2. Start monitoring-controller  
+bin/monitoring-controller.sh  
+
+3. Add storage service address (so we can call it)  
 POST 127.0.0.1:1499/addStorage?host=host&port=port  
 
-3. Add indexing service address (so we can call it)  
+4. Add indexing service address (so we can call it)  
 POST 127.0.0.1:1499/addIndexing?host=host&port=port  
 
-4. Add record to internal table (start monitoring of metric at node)  
+5. Add record to internal table (start monitoring of metric at node)  
 POST 127.0.0.1:1499/startMonitoring?host=host&port=port&type=type  
 
-5. Check that record  
+6. Check that record  
 GET 127.0.0.1:1499/getMetricsTable  
 
-6. Now you can try to request metrics  
+7. Now you can try to request metrics  
 127.0.0.1:1499/getMetrics?host=host&port=port&type=type&timestamp=timestamp  
 
 If there is no record in table for host,port,type then error message will be returned.  
