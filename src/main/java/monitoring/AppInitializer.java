@@ -44,7 +44,7 @@ public class AppInitializer {
         port(config.port);
         createRoutes();
         setup();
-
+        Spark.awaitInitialization();
         logger.info("Server successfully started at port: " + config.port);
     }
 
