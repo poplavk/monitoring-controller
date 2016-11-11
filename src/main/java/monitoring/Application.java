@@ -28,6 +28,7 @@ public class Application {
         try {
             initializer.start();
             logger.info("Application started successfully");
+	    Thread.currentThread().join();
         } catch (Throwable t) {
             logger.error("Error starting application", t);
             System.exit(1);

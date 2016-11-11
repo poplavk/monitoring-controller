@@ -23,6 +23,10 @@ distributions {
 
 mainClassName = "monitoring.Application"
 
+compileJava {
+    options.encoding = "UTF-8"
+}
+
 jar {
     baseName = 'monitoring-controller'
     version =  '0.1.0'
@@ -41,6 +45,8 @@ dependencies {
     compile "org.asynchttpclient:async-http-client:2.0.+"
     compile "org.apache.logging.log4j:log4j-api:2.6.2"
     compile "org.apache.logging.log4j:log4j-core:2.6.2"
+    compile "org.slf4j:slf4j-api:1.7.21"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:2.7"
 
     compile "com.fasterxml.jackson.core:jackson-databind:2.7.0"
 
@@ -51,7 +57,7 @@ startScripts {
     doLast {
         unixScript.text = unixScript.text.replace(
                 'exec "$JAVACMD" "${JVM_OPTS[@]}" -classpath "$CLASSPATH" monitoring.Application "$@"',
-                'nohup exec "$JAVACMD" "${JVM_OPTS[@]}" -classpath "$CLASSPATH" monitoring.Application "$@" &> /dev/null &'
+                'exec "$JAVACMD" "${JVM_OPTS[@]}" "-Dlog4j.configurationFile=config/log4j2.xml" -classpath "$CLASSPATH" monitoring.Application "$@" >> /dev/null &'
         )
     }
 }
